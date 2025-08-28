@@ -1,0 +1,204 @@
+# policies/pci.yaml
+version: 1
+metadata:
+  id: pci-dss-v4-default
+  name: "PCI DSS v4.0 Default Policy"
+  owner: "Sober & Co. Security"
+  description: >
+    Enforce PCI DSS v4.0 controls for PAN/CHD/SAD across logs, data stores,
+    and user interfaces. Blocks Sensitive Authentication Data, masks PAN in
+    display/logs, tokenises or hashes PAN at rest, and emits tamper-evident audits.
+  standard: "PCI DSS v4.0"
+  created: "2025-08-29"
+  references:
+    - "Req 3.2 – Do not store SAD after authorisation"
+    - "Req 3.3 – Mask PAN when displayed"
+    - "Req 3.4 – Render PAN unreadable wherever stored"
+    - "Req 3.5/3.6 – Cryptographic key management"
+
+defaults:
+  mode: fail_closed                # pipeline halts if policy can't be applied
+  action: redact                   # default if no specific rule applies
+  audit: required
+  masking:
+    pan:
+      show_first: 6
+      show_last: 4
+      replacement: "X"
+  tokenisation:
+    algorithm: fpe_ff1             # format-preserving numeric tokenisation
+    key_ref: "kms:alias/pci-pan-fpe"    # <- set to your KMS key alias/ARN
+    deterministic: true
+    reversible: true
+  hashing:
+    algorithm: sha256
+    salt_strategy: per_dataset      # salts differ per dataset to prevent linkage
+    salt_env: "REDACTABLE_SALT"     # <- set this env var in runtime
+  retention:
+    sad: "0s"                      # never retain SAD anywhere
+    logs: "90d"
+  visibility:
+    display_masked_pan_only: true  # only first6/last4 may be shown
+
+roles:
+  analyst:
+    can_view: [PAN_LAST4, PAN_MASKED, EXPIRY, AUDIT]
+  payments_ops:
+    can_view: [PAN_LAST4, PAN_MASKED, EXPIRY, AUDIT]
+  security_admin:
+    can_view: [PAN_TOKEN, PAN_LAST4, EXPIRY, AUDIT]
+  # No role is permitted to view SAD (CVV, track, PIN/PIN block)
+
+# ---------- Rules ----------
+rules:
+  # 1) Sensitive Authentication Data (SAD) – must not be stored post-auth (Req 3.2)
+  - id: sad_cvv_forbidden
+    when:
+      detector: CVV
+    transform: redact_full
+    on_violation: { block: true, alert: true }
+    audit_reason: "PCI DSS 3.2 – Remove CVV/CVC/CID"
+
+  - id: sad_track_forbidden
+    when:
+      detector: TRACK_DATA
+    transform: redact_full
+    on_violation: { block: true, alert: true }
+    audit_reason: "PCI DSS 3.2 – Remove full track data"
+
+  - id: sad_pinblock_forbidden
+    when:
+      detector: PIN_BLOCK
+    transform: redact_full
+    on_violation: { block: true, alert: true }
+    audit_reason: "PCI DSS 3.2 – Remove PIN/PIN block"
+
+  # 2) PAN handling – mask in logs/UI; tokenise or hash at rest (Req 3.3/3.4)
+  - id: pan_in_logs_and_ui
+    when:
+      detector: CREDIT_CARD
+      context:
+        dataset_class: ["log", "telemetry", "ui_render"]
+    transform: mask_pan
+    emit:
+      last4: true
+      token: false
+    audit_reason: "PCI DSS 3.3 – Mask PAN when displayed or logged"
+
+  - id: pan_at_rest_tokenise
+    when:
+      detector: CREDIT_CARD
+      context:
+        dataset_class: ["storage", "db", "warehouse", "backup", "export"]
+    transform: tokenise_fpe
+    fallback_transform: hash_sha256_salt
+    emit:
+      token: true
+      last4: true
+    audit_reason: "PCI DSS 3.4 – Render PAN unreadable wherever stored"
+
+  # 3) Expiry date & cardholder name – allowed to store, protect appropriately
+  - id: expiry_allowed_protect
+    when:
+      detector: EXPIRY_DATE
+    transform: keep
+    constraints:
+      encrypt_at_rest: true
+    audit_reason: "PCI DSS – Expiry may be stored; protect at rest"
+
+  - id: cardholder_name_allowed
+    when:
+      detector: PERSON_NAME
+      hints:
+        columns: ["cardholder_name", "name_on_card"]
+    transform: keep
+    constraints:
+      encrypt_at_rest: recommended
+    audit_reason: "PCI DSS – CHD permitted; protect at rest"
+
+# Field-specific overrides to reduce false positives and harden enforcement
+field_overrides:
+  - fields: ["pan","card_number","primary_account_number","cc","ccn"]
+    apply_rules: ["pan_in_logs_and_ui","pan_at_rest_tokenise"]
+  - fields: ["cvv","cvc","cvn","cav2","cid"]
+    apply_rules: ["sad_cvv_forbidden"]
+  - fields: ["track1","track2","magstripe","pan_track"]
+    apply_rules: ["sad_track_forbidden"]
+  - fields: ["pin","pin_block","pinblock"]
+    apply_rules: ["sad_pinblock_forbidden"]
+  - fields: ["expiry","exp","exp_date","expiration_date"]
+    apply_rules: ["expiry_allowed_protect"]
+
+# ---------- Detectors ----------
+detectors:
+  CREDIT_CARD:
+    type: luhn_pan
+    min_length: 12
+    max_length: 19
+    allow_separators: [" ", "-"]
+    emit_metadata: [last4, bin, brand]   # brand derived from IIN/BIN tables
+  CVV:
+    type: regex
+    pattern: "(?<!\\d)(\\d{3,4})(?!\\d)"
+    validators:
+      - context_column_in: ["cvv","cvc","cvn","cav2","cid"]
+  TRACK_DATA:
+    type: regex
+    patterns:
+      - "%B\\d{12,19}\\^[^^]{2,26}\\^\\d{4}\\d{3}[^^]*\\?"   # Track 1
+      - ";([0-9]{12,19})=\\d{4}\\d{3}[^\\?]*\\?"             # Track 2
+  PIN_BLOCK:
+    type: regex
+    pattern: "(?:^|[^A-F0-9])([A-F0-9]{16})(?:$|[^A-F0-9])"
+    validators:
+      - probable_formats: ["ISO-0","ISO-1","ISO-3"]
+  EXPIRY_DATE:
+    type: regex
+    patterns:
+      - "(0[1-9]|1[0-2])/(?:\\d{2}|\\d{4})"
+    validators:
+      - not_alone_with: ["CREDIT_CARD"]   # if PAN present, stricter transforms
+
+# ---------- Transforms ----------
+transforms:
+  redact_full:
+    type: redact
+    replacement: "[REDACTED]"
+  mask_pan:
+    type: mask_pan
+    show_first: 6
+    show_last: 4
+    replacement: "X"
+  tokenise_fpe:
+    type: tokenise
+    algorithm: fpe_ff1
+    domain: numeric
+    key_ref: "kms:alias/pci-pan-fpe"
+    deterministic: true
+    reversible: true
+    reidentify_roles: ["security_admin"]
+  hash_sha256_salt:
+    type: hash
+    algorithm: sha256
+    salt_env: "REDACTABLE_SALT"
+    deterministic: true
+  keep:
+    type: passthrough
+
+# ---------- Platform constraints & observability ----------
+constraints:
+  encryption_at_rest:
+    required_for_fields:
+      ["pan","card_number","primary_account_number","expiry","cardholder_name"]
+    key_ref: "kms:alias/app-db"
+
+observability:
+  audit_log:
+    format: jsonl
+    path: "audits/pci.jsonl"
+    include_decision_trace: true
+    hash_original: true            # store one-way hash of originals for diffing
+  metrics:
+    opentelemetry: true
+    counters: ["detector_matches","transforms_applied","violations_blocked"]
+    never_log_values: true
