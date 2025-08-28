@@ -11,6 +11,12 @@ from dataclasses import dataclass
 from typing import Iterable, Optional, Protocol, Tuple, Dict, Any
 import re
 
+# --------------------------------------------------------------------
+# Shared type aliases
+Span = Tuple[int, int]
+Extras = Dict[str, Any]
+
+
 @dataclass(slots=True)
 class Finding:
     """
@@ -26,14 +32,20 @@ class Finding:
     """
     kind: str
     value: str
-    span: Tuple[int, int]
+    span: Span
     confidence: float
     normalized: Optional[str] = None
-    extras: Dict[str, Any] | None = None
+    extras: Extras | None = None
 
     def __post_init__(self) -> None:
+        if not (0.0 <= self.confidence <= 1.0):
+            raise ValueError("confidence must be between 0 and 1")
         if self.extras is None:
             self.extras = {}
+
+    def __str__(self) -> str:
+        return f"<Finding {self.kind} value='{self.value}' conf={self.confidence:.2f}>"
+
 
 class Detector(Protocol):
     """
@@ -76,17 +88,36 @@ def luhn_ok(num: str) -> bool:
 def guess_card_brand(pan: str) -> str | None:
     """
     Make a naive guess of card brand from PAN digits.
-    Returns one of: visa, mastercard, amex, jcb, discover, or None.
+    Not exhaustive — just common prefixes and lengths.
     """
     d = digits_only(pan)
+
     if d.startswith("4") and len(d) in (13, 16, 19):
         return "visa"
+
     if d[:2].isdigit() and 51 <= int(d[:2]) <= 55 and len(d) == 16:
         return "mastercard"
+    if d[:4].isdigit() and 2221 <= int(d[:4]) <= 2720 and len(d) == 16:
+        return "mastercard"
+
     if d.startswith(("34", "37")) and len(d) == 15:
         return "amex"
+
     if d.startswith("35") and len(d) == 16:
         return "jcb"
+
     if d.startswith("6011") or d.startswith(("64", "65")):
         return "discover"
+
+    if d[:4] in {"3000", "3050", "3095"} or d[:2] in {"36", "38"}:
+        return "diners_club"
+
+    if d.startswith(("50", "56", "57", "58", "63", "67")):
+        return "maestro"
+
+    if d.startswith("62"):
+        return "unionpay"
+
     return None
+
+

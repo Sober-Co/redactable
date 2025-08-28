@@ -16,7 +16,6 @@ Design:
 - All detectors implement the Detector protocol defined in base.py.
 """
 
-from __future__ import annotations
 import re
 from typing import Iterable, Dict, Any
 
@@ -25,11 +24,13 @@ from .base import Finding, Detector, digits_only, luhn_ok, guess_card_brand
 # --------------------------------------------------------------------
 # Optional external dependencies (gracefully degrade if missing)
 
+
 try:
     from email_validator import validate_email, EmailNotValidError  # type: ignore
 except Exception:  # pragma: no cover
     validate_email = None
-    class EmailNotValidError(Exception): ...
+    class EmailNotValidError(Exception):
+        pass
 try:
     import phonenumbers  # type: ignore
 except Exception:  # pragma: no cover
@@ -44,12 +45,104 @@ except Exception:  # pragma: no cover
 # --------------------------------------------------------------------
 # Regex patterns (baseline filters)
 
-RE_EMAIL = re.compile(r"...")   # TODO: implement full RFC-ish regex
-RE_PHONE = re.compile(r"...")   # TODO: phone number pattern
-RE_CARD  = re.compile(r"...")   # TODO: credit card pattern
-RE_NHS   = re.compile(r"...")   # TODO: UK NHS number pattern
-RE_SSN   = re.compile(r"...")   # TODO: US SSN pattern
-RE_IBAN  = re.compile(r"...")   # TODO: IBAN pattern
+# Regex pattern: not fully RFC 5322 (too heavy) but good 95% case
+RE_EMAIL = re.compile(
+    r"""
+    (?P<email>
+      [a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+
+      @
+      [a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?
+      (?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+
+    )
+    """,
+    re.VERBOSE)
+
+# PAN: 13–19 digits, spaces/dashes optional
+RE_CARD = re.compile(r"(?:\b(?:\d[ -]?){13,19}\b)")
+
+class CreditCardDetector:
+    """Detect payment card PANs via regex + Luhn + brand guess."""
+    name = "credit_card"
+
+    def detect(self, text: str) -> Iterable[Finding]:
+        for m in RE_CARD.finditer(text):
+            raw = m.group(0)
+            digits = digits_only(raw)
+
+            # Quick reject obvious bad lengths
+            if not (13 <= len(digits) <= 19):
+                continue
+
+            ok = luhn_ok(digits)
+            brand = guess_card_brand(digits)
+            conf = 0.9 if ok else 0.4
+
+            yield Finding(
+                kind=self.name,
+                value=raw,
+                span=m.span(),
+                confidence=conf,
+                normalized=digits,
+                extras={"luhn_valid": ok, "brand": brand},
+            )
+
+try:
+    import phonenumbers  # type: ignore
+except Exception:  # pragma: no cover
+    phonenumbers = None
+
+# --------------------------------------------------------------------
+# Simple phone regex fallback
+RE_PHONE = re.compile(
+    r"""
+    (?:\+\d{1,3}[\s-]?)?      # optional country code
+    (?:\(?\d{2,4}\)?[\s-]?)?  # optional area code
+    \d{3,4}[\s-]?\d{3,4}      # subscriber number
+    """,
+    re.VERBOSE,
+)
+
+class PhoneDetector:
+    """Detect phone numbers via regex + optional libphonenumber."""
+    name = "phone"
+
+    def __init__(self, default_region: str = "GB") -> None:
+        self.default_region = default_region
+
+    def detect(self, text: str):
+        if phonenumbers is not None:
+            # Preferred: use Google's libphonenumber
+            for m in phonenumbers.PhoneNumberMatcher(text, self.default_region):
+                num = m.number
+                norm = phonenumbers.format_number(
+                    num, phonenumbers.PhoneNumberFormat.E164
+                )
+                conf = 0.95 if phonenumbers.is_valid_number(num) else 0.6
+                extras = {
+                    "region": phonenumbers.region_code_for_number(num),
+                    "type": str(phonenumbers.number_type(num)),
+                }
+                yield Finding(
+                    kind=self.name,
+                    value=text[m.start : m.end],
+                    span=(m.start, m.end),
+                    confidence=conf,
+                    normalized=norm,
+                    extras=extras,
+                )
+            return
+
+        # Fallback regex-only detection
+        for m in RE_PHONE.finditer(text):
+            raw = m.group(0)
+            yield Finding(
+                kind=self.name,
+                value=raw,
+                span=m.span(),
+                confidence=0.5,
+                normalized=digits_only(raw),
+            )
+
 
 # --------------------------------------------------------------------
 # Detector stubs
@@ -57,43 +150,157 @@ RE_IBAN  = re.compile(r"...")   # TODO: IBAN pattern
 class EmailDetector:
     """Detect email addresses via regex + optional email-validator."""
     name = "email"
-    def detect(self, text: str) -> Iterable[Finding]:
-        # TODO: implement regex scan + validation
-        return []
 
-class PhoneDetector:
-    """Detect phone numbers via regex + optional libphonenumber."""
-    name = "phone"
-    def __init__(self, default_region: str = "GB") -> None:
-        self.default_region = default_region
     def detect(self, text: str) -> Iterable[Finding]:
-        # TODO: implement regex scan + validation
-        return []
+        for m in RE_EMAIL.finditer(text):
+            raw = m.group("email")
+            start, end = m.span()
+            conf = 0.6
+            norm = raw
+            extras: Dict[str, Any] = {}
+            # If email-validator is available, upgrade confidence
+            if validate_email is not None:
+                try:
+                    result = validate_email(raw, allow_smtputf8=True)
+                    norm = result.normalized
+                    conf = 0.95
+                    extras["domain"] = result.domain
+                except EmailNotValidError as e:
+                    extras["invalid_reason"] = str(e)
+            yield Finding(
+                kind=self.name,
+                value=raw,
+                span=(start, end),
+                confidence=conf,
+                normalized=norm,
+                extras=extras,
+            )
 
-class CreditCardDetector:
-    """Detect payment card PANs via regex + Luhn check."""
-    name = "credit_card"
-    def detect(self, text: str) -> Iterable[Finding]:
-        # TODO: implement regex scan + Luhn + brand guess
-        return []
+try:
+    from stdnum import iban as std_iban  # type: ignore
+    from stdnum.gb import nhs as std_nhs  # type: ignore
+    from stdnum.us import ssn as std_us_ssn  # type: ignore
+except Exception:  # pragma: no cover
+    std_iban = std_nhs = std_us_ssn = None
 
+# --------------------------------------------------------------------
+# Regex patterns
+RE_NHS = re.compile(r"\b(\d{3})[\s-]?(\d{3})[\s-]?(\d{4})\b")
+RE_SSN = re.compile(r"\b(\d{3})[\s-]?(\d{2})[\s-]?(\d{4})\b")
+RE_IBAN = re.compile(r"\b([A-Z]{2}\d{2}[A-Z0-9]{11,30})\b", re.IGNORECASE)
+
+# --------------------------------------------------------------------
+# NHS Number
 class NHSNumberDetector:
     """Detect UK NHS numbers via regex + mod-11 check."""
     name = "nhs_number"
-    def detect(self, text: str) -> Iterable[Finding]:
-        # TODO: implement regex scan + checksum validation
-        return []
 
+    def detect(self, text: str):
+        for m in RE_NHS.finditer(text):
+            raw = m.group(0)
+            d = digits_only(raw)
+            if len(d) != 10:
+                continue
+            valid = False
+            reason = None
+            if std_nhs is not None:
+                try:
+                    valid = std_nhs.is_valid(d)
+                except Exception as e:
+                    reason = str(e)
+            else:
+                # Mod 11 algorithm
+                weights = [10, 9, 8, 7, 6, 5, 4, 3, 2]
+                total = sum(int(d[i]) * weights[i] for i in range(9))
+                remainder = total % 11
+                check = 11 - remainder
+                if check == 11:
+                    check = 0
+                valid = (check != 10) and (check == int(d[9]))
+            conf = 0.92 if valid else 0.4
+            yield Finding(
+                kind=self.name,
+                value=raw,
+                span=m.span(),
+                confidence=conf,
+                normalized=d,
+                extras={"valid": valid, "reason": reason},
+            )
+
+# --------------------------------------------------------------------
+# US Social Security Number
 class USSSNDetector:
     """Detect US Social Security Numbers via regex + range validation."""
     name = "ssn_us"
-    def detect(self, text: str) -> Iterable[Finding]:
-        # TODO: implement regex scan + validation
-        return []
 
+    def detect(self, text: str):
+        for m in RE_SSN.finditer(text):
+            raw = m.group(0)
+            d = digits_only(raw)
+            if len(d) != 9:
+                continue
+            valid = None
+            reason = None
+            if std_us_ssn is not None:
+                try:
+                    valid = std_us_ssn.is_valid(d)
+                except Exception as e:
+                    valid = False
+                    reason = str(e)
+            else:
+                # Basic exclusions
+                area, group, serial = d[:3], d[3:5], d[5:]
+                if area == "000" or area == "666" or "900" <= area <= "999":
+                    valid = False
+                elif group == "00" or serial == "0000":
+                    valid = False
+                else:
+                    valid = True
+            conf = 0.9 if valid else 0.4
+            yield Finding(
+                kind=self.name,
+                value=raw,
+                span=m.span(),
+                confidence=conf,
+                normalized=d,
+                extras={"valid": valid, "reason": reason},
+            )
+
+# --------------------------------------------------------------------
+# IBAN
 class IBANDetector:
     """Detect IBANs via regex + mod-97 validation."""
     name = "iban"
-    def detect(self, text: str) -> Iterable[Finding]:
-        # TODO: implement regex scan + validation
-        return []
+
+    def detect(self, text: str):
+        for m in RE_IBAN.finditer(text):
+            raw = m.group(1)
+            canon = re.sub(r"\s+", "", raw).upper()
+            valid = None
+            reason = None
+            country = canon[:2]
+            if std_iban is not None:
+                try:
+                    valid = std_iban.is_valid(canon)
+                except Exception as e:
+                    valid = False
+                    reason = str(e)
+            else:
+                # Minimal IBAN check: mod-97
+                def _mod97(s: str) -> int:
+                    rearr = s[4:] + s[:4]
+                    num = "".join(str(ord(c) - 55) if c.isalpha() else c for c in rearr)
+                    rem = 0
+                    for i in range(0, len(num), 9):
+                        rem = int(str(rem) + num[i:i+9]) % 97
+                    return rem
+                valid = country.isalpha() and canon[2:4].isdigit() and _mod97(canon) == 1
+            conf = 0.95 if valid else 0.5
+            yield Finding(
+                kind=self.name,
+                value=raw,
+                span=m.span(),
+                confidence=conf,
+                normalized=canon,
+                extras={"valid": valid, "country": country, "reason": reason},
+            )

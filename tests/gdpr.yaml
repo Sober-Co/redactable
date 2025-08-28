@@ -1,0 +1,16 @@
+version: 1
+name: gdpr
+description: >
+  Minimal example policy demonstrating structure. 
+  Replace with real GDPR rules as engine matures.
+
+rules:
+  - id: mask_email
+    field: email
+    action: mask
+    mask: "****@example.com"
+
+  - id: redact_credit_card
+    field: credit_card
+    action: redact
+    replacement: "[REDACTED:CARD]"
