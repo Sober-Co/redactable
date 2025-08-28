@@ -1,16 +1,17 @@
+# gdpr.yaml — minimal example policy for Redactable v0.1
 version: 1
 name: gdpr
-description: >
-  Minimal example policy demonstrating structure. 
-  Replace with real GDPR rules as engine matures.
+description: Minimal example showing redact + mask actions.
 
 rules:
-  - id: mask_email
-    field: email
-    action: mask
-    mask: "****@example.com"
-
-  - id: redact_credit_card
+  - id: redact_card
     field: credit_card
     action: redact
     replacement: "[REDACTED:CARD]"
+
+  - id: mask_email
+    field: email
+    action: mask
+    keep_head: 0
+    keep_tail: 4
+    mask_glyph: "•"
