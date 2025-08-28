@@ -1,20 +1,85 @@
-from __future__ import annotations
+# ruff: noqa: E402
+from dataclasses import dataclass
+import hashlib
+from typing import Iterable
+
 from redactable.detectors import Finding
-from .model import Policy
-from ..transforms import redact as redact_mod, mask as mask_mod, tokenize as tok_mod
+from redactable.policy import Policy
+
+
+@dataclass(slots=True)
+class _MaskCfg:
+    keep_head: int = 0
+    keep_tail: int = 4
+    glyph: str = "•"
+
+# --- local transforms (minimal v0.1; no external deps) ---------------------
+
+def _redact(text: str, findings: Iterable[Finding], placeholder: str = "[REDACTED:{kind}]") -> str:
+    out = text
+    for f in sorted(findings, key=lambda x: x.span[0], reverse=True):
+        s, e = f.span
+        out = out[:s] + placeholder.format(kind=f.kind.upper()) + out[e:]
+    return out
+
+
+def _mask_segment(s: str, cfg: _MaskCfg) -> str:
+    if len(s) <= cfg.keep_head + cfg.keep_tail:
+        return cfg.glyph * len(s)
+    mid = cfg.glyph * (len(s) - cfg.keep_head - cfg.keep_tail)
+    return s[:cfg.keep_head] + mid + s[-cfg.keep_tail:]
+
+
+def _mask(text: str, findings: Iterable[Finding], cfg: _MaskCfg) -> str:
+    out = text
+    for f in sorted(findings, key=lambda x: x.span[0], reverse=True):
+        s, e = f.span
+        out = out[:s] + _mask_segment(out[s:e], cfg) + out[e:]
+    return out
+
+
+def _sha256(value: str, salt: str = "") -> str:
+    return hashlib.sha256((salt + value).encode("utf-8")).hexdigest()
+
+
+def _tokenize(text: str, findings: Iterable[Finding], salt: str = "") -> str:
+    out = text
+    for f in sorted(findings, key=lambda x: x.span[0], reverse=True):
+        s, e = f.span
+        token = _sha256(f.normalized or f.value, salt)
+        out = out[:s] + token + out[e:]
+    return out
+
+
+# --- public API -------------------------------------------------------------
 
 def apply_policy(policy: Policy, findings: list[Finding], text: str) -> str:
+    """
+    Apply a Policy to text using previously-detected Findings.
+
+    Strategy (v0.1):
+    - Treat `rule.field` as the detector kind (e.g. "email", "credit_card").
+    - Apply actions independently; rules are idempotent by design.
+    - Apply replacements right-to-left to preserve spans.
+    """
     out = text
-    # Naive v0.1: apply rules by kind (“field” aligns with detector kind)
+
+    # Group findings by kind for quick lookup
+    by_kind: dict[str, list[Finding]] = {}
+    for f in findings:
+        by_kind.setdefault(f.kind, []).append(f)
+
     for rule in policy.rules:
-        targets = [f for f in findings if f.kind == rule.field]
+        targets = by_kind.get(rule.field, [])
         if not targets:
             continue
         if rule.action == "redact":
-            out = redact_mod.redact(out, targets, placeholder_fmt=rule.replacement or "[REDACTED:{kind}]")
+            placeholder = rule.replacement or "[REDACTED:{kind}]"
+            out = _redact(out, targets, placeholder)
         elif rule.action == "mask":
-            # simple heuristic: keep last 4
-            out = mask_mod.mask_in_place(out, targets, keep_head=0, keep_tail=4)
+            cfg = _MaskCfg(keep_head=rule.keep_head, keep_tail=rule.keep_tail, glyph=rule.mask_glyph)
+            out = _mask(out, targets, cfg)
         elif rule.action == "tokenize":
-            out = tok_mod.tokenize(out, targets, salt="")
+            out = _tokenize(out, targets, salt=rule.salt)
+
     return out
