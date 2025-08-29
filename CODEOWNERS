@@ -1,0 +1,8 @@
+# Require review by core maintainers for all code
+*       @Sober-Co/maintainers
+
+# Python package
+/src/   @Sober-Co/maintainers @Sober-Co/python
+
+# Policies (YAML)
+/policies/  @Sober-Co/maintainers @Sober-Co/policy

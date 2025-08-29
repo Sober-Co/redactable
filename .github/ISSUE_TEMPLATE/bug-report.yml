@@ -1,0 +1,25 @@
+name: "🐛 Bug Report"
+description: Report a reproducible problem
+labels: ["bug"]
+body:
+  - type: textarea
+    id: summary
+    attributes: {label: Summary, placeholder: "What happened? What did you expect?"}
+    validations: {required: true}
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: "Minimal code/policy + steps. Include sample input/output."
+      render: shell
+    validations: {required: true}
+  - type: input
+    id: version
+    attributes: {label: Version, placeholder: "redactable 0.x.y, Python 3.13.x"}
+    validations: {required: true}
+  - type: dropdown
+    id: os
+    attributes: {label: OS, options: ["Windows", "macOS", "Linux"]}
+  - type: textarea
+    id: logs
+    attributes: {label: Logs/Traceback (redact secrets), render: text}
