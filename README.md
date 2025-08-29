@@ -1,3 +1,9 @@
+[![CI](https://github.com/Sober-Co/redactable/actions/workflows/ci.yml/badge.svg)](…)
+[![codecov](https://codecov.io/gh/Sober-Co/redactable/branch/main/graph/badge.svg)](…)
+[![PyPI version](https://img.shields.io/pypi/v/redactable.svg)](https://pypi.org/project/redactable/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+
 # 🛡️ redactable
 
 **Redactable — protect what matters, without breaking what doesn’t.**  
