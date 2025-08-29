@@ -17,6 +17,41 @@ Span = Tuple[int, int]
 Extras = Dict[str, Any]
 
 
+from dataclasses import dataclass
+from typing import Iterable, Protocol, TypedDict, Optional, Dict, Any, List
+
+@dataclass(slots=True)
+class Match:
+    label: str               # e.g. "EMAIL", "CREDIT_CARD"
+    start: int               # byte/char index in the input text
+    end: int
+    value: str               # matched text (pre-transform)
+    confidence: float = 1.0  # 0..1
+    meta: dict[str, Any] = None
+
+class Detector(Protocol):
+    name: str
+    labels: tuple[str, ...]
+    def detect(self, text: str, *, context: Optional[dict[str, Any]] = None) -> Iterable[Match]: ...
+
+# Simple registry
+_REGISTRY: Dict[str, Detector] = {}
+_LABEL_TO_DETECTORS: Dict[str, List[str]] = {}
+
+def register(detector: Detector) -> None:
+    _REGISTRY[detector.name] = detector
+    for label in detector.labels:
+        _LABEL_TO_DETECTORS.setdefault(label, []).append(detector.name)
+
+def get(name: str) -> Detector:
+    return _REGISTRY[name]
+
+def detectors_for(label: str) -> list[Detector]:
+    return [ _REGISTRY[n] for n in _LABEL_TO_DETECTORS.get(label, []) ]
+
+def all_detectors() -> list[Detector]:
+    return list(_REGISTRY.values())
+
 @dataclass(slots=True)
 class Finding:
     """
