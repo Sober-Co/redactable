@@ -11,12 +11,12 @@ Detects high-entropy strings (likely secrets, tokens, API keys).
 Intended as a complement to regex-based detectors.
 """
 
-from __future__ import annotations
-from typing import Iterable
 import re
+from .base import Match, register, Finding, Detector
+from .utils import shannon_entropy, looks_like_secret
+from typing import Iterable
 import math
 
-from .base import Finding, Detector
 
 # --------------------------------------------------------------------
 # Helpers
@@ -81,3 +81,26 @@ class HighEntropyTokenDetector:
                     normalized=raw,
                     extras={"entropy": ent},
                 )
+
+
+# Tokens separated by non-word; allow -,_,= typical in JWT/base64url
+_TOKEN = re.compile(r'([A-Za-z0-9_\-=+/]{20,})')
+
+class EntropyDetector:
+    name = "entropy"
+    labels = ("SECRET",)
+
+    def __init__(self, *, threshold: float = 3.5):
+        self.threshold = threshold
+
+    def detect(self, text: str, *, context=None):
+        threshold = (context or {}).get("entropy_threshold", self.threshold)
+        for m in _TOKEN.finditer(text):
+            token = m.group(1)
+            if not looks_like_secret(token):
+                continue
+            H = shannon_entropy(token)
+            if H >= threshold:
+                yield Match("SECRET", m.start(1), m.end(1), token, min(0.99, 0.7 + (H-threshold)/4), {"entropy": H})
+
+register(EntropyDetector())
