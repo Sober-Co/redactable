@@ -4,7 +4,17 @@ from typing import Literal, Optional
 from pydantic import BaseModel, Field, field_validator
 
 Action = Literal["redact", "mask", "tokenize"]
-
+_ACTION_ALIASES = {
+    "tokenise": "tokenize",
+    "tokenize": "tokenize",
+    "pseudonymise": "tokenize",   # treat as tokenize for now
+    "pseudonymize": "tokenize",
+    "redact": "redact",
+    "mask": "mask",
+    "scrub": "redact",            # scrub ≈ redact pass over text
+    "generalise": "mask",         # placeholder until a real generalise op exists
+    "generalize": "mask",
+}
 class Rule(BaseModel):
     """
     One transformation applied to all Findings whose kind == field.
@@ -27,6 +37,15 @@ class Rule(BaseModel):
 
     # Tokenize options
     salt: str = Field("", description="Optional salt used for tokenization hashing")
+
+    @field_validator("action", mode="before")
+    @classmethod
+    def _normalize_action(cls, v: str) -> str:
+        if isinstance(v, str):
+            key = v.strip().lower()
+            if key in _ACTION_ALIASES:
+                return _ACTION_ALIASES[key]
+        return v
 
     @field_validator("field")
     @classmethod
