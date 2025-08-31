@@ -68,18 +68,6 @@ print(result)
 # → "Customer email: ****@example.com"
 ````
 
-
-### Python SDK
-
-````bash
-from redactable import apply
-
-data = "Customer email: test@example.com"
-result = apply(data, policy="gdpr.yaml")
-print(result)
-# → "Customer email: ****@example.com"
-````
-
 ### Pandas Integration
 
 ````bash
@@ -121,7 +109,7 @@ print(redacted)
 
 - Redaction: ``[REDACTED:TYPE]``
 
-- Masking: ``****1234``
+- Masking: ``****1234``  |  ``*2*4*6*8``  |  ``****@domain.tld`` | ``*b*d*f*h@domain.tld``
 
 - Tokenisation/Hashing: irreversible, format-preserving
 
