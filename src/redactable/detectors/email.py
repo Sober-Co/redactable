@@ -1,5 +1,6 @@
 import re
-from .base import Match, Detector, register
+from typing import Optional
+from .base import Finding, register
 
 _EMAIL = re.compile(
     r'(?<![A-Za-z0-9._%+-])'     # left boundary
@@ -13,8 +14,13 @@ class EmailDetector:
     name = "email"
     labels = ("EMAIL",)
 
-    def detect(self, text: str, *, context=None):
+    def detect(self, text: str, *, context: Optional[dict] = None):
         for m in _EMAIL.finditer(text):
-            yield Match(label="EMAIL", start=m.start(1), end=m.end(1), value=m.group(1), confidence=0.95)
+            yield Finding(
+                kind="EMAIL",
+                value=m.group(1),
+                span=(m.start(1), m.end(1)),
+                confidence=0.95,
+            )
 
 register(EmailDetector())

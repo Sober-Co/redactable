@@ -1,3 +1,0 @@
-"""
-composite detection + apply
-"""

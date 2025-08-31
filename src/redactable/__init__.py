@@ -4,11 +4,11 @@ Detector,
 DetectorRegistry,
 EmailDetector,
 PhoneDetector,
-CreditCardDetector,
 NHSNumberDetector,
 USSSNDetector,
 IBANDetector,
 HighEntropyTokenDetector,
+CreditCardDetector
 )
 from .policy.loader import load_policy
 from .policy.engine import apply_policy

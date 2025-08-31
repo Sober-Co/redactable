@@ -17,10 +17,10 @@ from .base import Detector, Finding
 from .regexes import (
     EmailDetector,
     PhoneDetector,
-    CreditCardDetector,
     NHSNumberDetector,
     USSSNDetector,
     IBANDetector,
+    CreditCardDetector
 )
 from .entropy import HighEntropyTokenDetector
 

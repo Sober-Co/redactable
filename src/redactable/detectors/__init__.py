@@ -7,15 +7,14 @@ Exports:
 - Built-in detectors: Email, Phone, Credit Card, NHS, SSN, IBAN, High-Entropy Token
 """
 
-from .base import Finding, Detector, Match, all_detectors, detectors_for, get
+from .base import Finding, Detector, all_detectors, detectors_for, get
 from .registry import DetectorRegistry
 from .regexes import (
     EmailDetector,
     PhoneDetector,
-    CreditCardDetector,
     NHSNumberDetector,
     USSSNDetector,
-    IBANDetector,
+    IBANDetector, CreditCardDetector,
 )
 from .entropy import HighEntropyTokenDetector
 from . import email, credit_card, iban, nhs, ssn, phone, entropy, schema_hints  # noqa: F401

@@ -2,13 +2,17 @@
 Core types and helpers for detectors.
 
 Contents:
+
 - Finding: dataclass representing a detected entity.
 - Detector: Protocol interface that all detectors must implement.
-- Shared helper functions: digits_only, luhn_ok, guess_card_brand.
+- Registry helpers: register/get/detectors_for/all_detectors
+- Shared helpers: digits_only, luhn_ok, guess_card_brand
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Iterable, Optional, Protocol, Tuple, Dict, Any
+from typing import Iterable, Optional, Protocol, Tuple, Dict, Any, List
 import re
 
 # --------------------------------------------------------------------
@@ -16,41 +20,8 @@ import re
 Span = Tuple[int, int]
 Extras = Dict[str, Any]
 
-
-from dataclasses import dataclass
-from typing import Iterable, Protocol, TypedDict, Optional, Dict, Any, List
-
-@dataclass(slots=True)
-class Match:
-    label: str               # e.g. "EMAIL", "CREDIT_CARD"
-    start: int               # byte/char index in the input text
-    end: int
-    value: str               # matched text (pre-transform)
-    confidence: float = 1.0  # 0..1
-    meta: dict[str, Any] = None
-
-class Detector(Protocol):
-    name: str
-    labels: tuple[str, ...]
-    def detect(self, text: str, *, context: Optional[dict[str, Any]] = None) -> Iterable[Match]: ...
-
-# Simple registry
-_REGISTRY: Dict[str, Detector] = {}
-_LABEL_TO_DETECTORS: Dict[str, List[str]] = {}
-
-def register(detector: Detector) -> None:
-    _REGISTRY[detector.name] = detector
-    for label in detector.labels:
-        _LABEL_TO_DETECTORS.setdefault(label, []).append(detector.name)
-
-def get(name: str) -> Detector:
-    return _REGISTRY[name]
-
-def detectors_for(label: str) -> list[Detector]:
-    return [ _REGISTRY[n] for n in _LABEL_TO_DETECTORS.get(label, []) ]
-
-def all_detectors() -> list[Detector]:
-    return list(_REGISTRY.values())
+# --------------------------------------------------------------------
+# Public result type
 
 @dataclass(slots=True)
 class Finding:
@@ -58,11 +29,11 @@ class Finding:
     Represents a detected entity in text.
 
     Attributes:
-        kind: Type of entity (e.g. "email", "phone", "iban").
+        kind: Type of entity (e.g., "CREDIT_CARD", "EMAIL", "PHONE").
         value: Raw text that was matched.
-        span: (start, end) indices of the match in the original text.
+        span: (start, end) indices in the original text.
         confidence: Detection confidence score in [0, 1].
-        normalized: Canonicalized form (e.g. digits-only phone number).
+        normalized: Canonicalized form (e.g., digits-only phone number).
         extras: Additional metadata (brand, region, reasons, etc.).
     """
     kind: str
@@ -81,20 +52,44 @@ class Finding:
     def __str__(self) -> str:
         return f"<Finding {self.kind} value='{self.value}' conf={self.confidence:.2f}>"
 
+# --------------------------------------------------------------------
+# Detector protocol (single, canonical)
 
 class Detector(Protocol):
     """
-    Protocol that all detectors must follow.
-    Each detector must expose a `name` and a `detect` method.
+    All detectors must expose:
+      - `name`: unique identifier for the detector
+      - `labels`: tuple of labels this detector can produce (e.g., ("CREDIT_CARD",))
+      - `detect(text, *, context=None) -> Iterable[Finding]`
     """
     name: str
+    labels: tuple[str, ...]
+    def detect(self, text: str, *, context: Optional[dict[str, Any]] = None) -> Iterable[Finding]: ...
 
-    def detect(self, text: str) -> Iterable[Finding]: ...
+# --------------------------------------------------------------------
+# Simple registry
+
+_REGISTRY: Dict[str, Detector] = {}
+_LABEL_TO_DETECTORS: Dict[str, List[str]] = {}
+
+def register(detector: Detector) -> None:
+    _REGISTRY[detector.name] = detector
+    for label in detector.labels:
+        _LABEL_TO_DETECTORS.setdefault(label, []).append(detector.name)
+
+def get(name: str) -> Detector:
+    return _REGISTRY[name]
+
+def detectors_for(label: str) -> list[Detector]:
+    return [_REGISTRY[n] for n in _LABEL_TO_DETECTORS.get(label, [])]
+
+def all_detectors() -> list[Detector]:
+    return list(_REGISTRY.values())
 
 # --------------------------------------------------------------------
 # Shared helpers
 
-_DIGITS = re.compile(r"\\D+")
+_DIGITS = re.compile(r"\D+")
 
 def digits_only(s: str) -> str:
     """Strip all non-digit characters from a string."""
@@ -122,37 +117,35 @@ def luhn_ok(num: str) -> bool:
 
 def guess_card_brand(pan: str) -> str | None:
     """
-    Make a naive guess of card brand from PAN digits.
+    Naive guess of card brand from PAN digits.
     Not exhaustive — just common prefixes and lengths.
     """
     d = digits_only(pan)
 
     if d.startswith("4") and len(d) in (13, 16, 19):
-        return "visa"
+        return "VISA"
 
     if d[:2].isdigit() and 51 <= int(d[:2]) <= 55 and len(d) == 16:
-        return "mastercard"
+        return "MASTERCARD"
     if d[:4].isdigit() and 2221 <= int(d[:4]) <= 2720 and len(d) == 16:
-        return "mastercard"
+        return "MASTERCARD"
 
     if d.startswith(("34", "37")) and len(d) == 15:
-        return "amex"
+        return "AMEX"
 
     if d.startswith("35") and len(d) == 16:
-        return "jcb"
+        return "JCB"
 
     if d.startswith("6011") or d.startswith(("64", "65")):
-        return "discover"
+        return "DISCOVER"
 
     if d[:4] in {"3000", "3050", "3095"} or d[:2] in {"36", "38"}:
-        return "diners_club"
+        return "DINERS_CLUB"
 
     if d.startswith(("50", "56", "57", "58", "63", "67")):
-        return "maestro"
+        return "MAESTRO"
 
     if d.startswith("62"):
-        return "unionpay"
+        return "UNIONPAY"
 
     return None
-
-

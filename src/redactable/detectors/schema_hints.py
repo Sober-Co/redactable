@@ -1,7 +1,5 @@
-from .base import Match, register
+from .base import register
 
-# This detector relies on context = {"schema": {"field_name": "value", ...}}
-# It emits matches for fields whose names are known sensitive hints.
 _HINTS = {
     "email": "EMAIL",
     "e_mail": "EMAIL",
@@ -10,7 +8,7 @@ _HINTS = {
     "credit_card": "CREDIT_CARD",
     "card_number": "CREDIT_CARD",
     "ssn": "SSN",
-    "national_insurance": "NINO",  # placeholder label if/when added
+    "national_insurance": "NINO",
     "phone": "PHONE",
     "phone_number": "PHONE",
     "dob": "DATE_DOB",
@@ -22,8 +20,6 @@ class SchemaHintDetector:
     labels = tuple(set(_HINTS.values()))
 
     def detect(self, text: str, *, context=None):
-        # No-op for raw text. This detector is meant for structured rows.
-        # We still implement the signature; integrate at the DataFrame layer.
         return
         yield  # generator stub
 

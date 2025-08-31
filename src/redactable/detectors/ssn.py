@@ -1,6 +1,7 @@
 from __future__ import annotations
 import re
-from .base import Match, register
+from typing import Optional
+from .base import Finding, register
 
 _SSN = re.compile(r'(?<!\d)(\d{3}-?\d{2}-?\d{4})(?!\d)')
 
@@ -16,10 +17,15 @@ class SSNDetector:
     name = "ssn"
     labels = ("SSN",)
 
-    def detect(self, text: str, *, context=None):
+    def detect(self, text: str, *, context: Optional[dict] = None):
         for m in _SSN.finditer(text):
             raw = m.group(1)
             if _valid_ssn(raw):
-                yield Match("SSN", m.start(1), m.end(1), raw, 0.95)
+                yield Finding(
+                    kind="SSN",
+                    value=raw,
+                    span=(m.start(1), m.end(1)),
+                    confidence=0.95,
+                )
 
 register(SSNDetector())

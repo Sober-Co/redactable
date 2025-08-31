@@ -19,7 +19,7 @@ Design:
 import re
 from typing import Iterable, Dict, Any
 
-from .base import Finding, Detector, digits_only, luhn_ok, guess_card_brand
+from .base import Finding, digits_only, luhn_ok, guess_card_brand
 
 # --------------------------------------------------------------------
 # Optional external dependencies (gracefully degrade if missing)
@@ -59,32 +59,6 @@ RE_EMAIL = re.compile(
 
 # PAN: 13–19 digits, spaces/dashes optional
 RE_CARD = re.compile(r"(?:\b(?:\d[ -]?){13,19}\b)")
-
-class CreditCardDetector:
-    """Detect payment card PANs via regex + Luhn + brand guess."""
-    name = "credit_card"
-
-    def detect(self, text: str) -> Iterable[Finding]:
-        for m in RE_CARD.finditer(text):
-            raw = m.group(0)
-            digits = digits_only(raw)
-
-            # Quick reject obvious bad lengths
-            if not (13 <= len(digits) <= 19):
-                continue
-
-            ok = luhn_ok(digits)
-            brand = guess_card_brand(digits)
-            conf = 0.9 if ok else 0.4
-
-            yield Finding(
-                kind=self.name,
-                value=raw,
-                span=m.span(),
-                confidence=conf,
-                normalized=digits,
-                extras={"luhn_valid": ok, "brand": brand},
-            )
 
 try:
     import phonenumbers  # type: ignore
@@ -303,4 +277,37 @@ class IBANDetector:
                 confidence=conf,
                 normalized=canon,
                 extras={"valid": valid, "country": country, "reason": reason},
+            )
+
+
+class CreditCardDetector:
+    """Detect payment card PANs via regex + Luhn + brand guess."""
+    name = "credit_card"
+
+    def detect(self, text: str) -> Iterable[Finding]:
+        for m in RE_CARD.finditer(text):
+            raw = m.group(0)
+            digits = digits_only(raw)
+
+            # Quick reject obvious bad lengths
+            if not (13 <= len(digits) <= 19):
+                continue
+
+            ok = luhn_ok(digits)
+            brand = guess_card_brand(digits)
+            conf = 0.9 if ok else 0.4
+            if brand is None:
+                conf = round(conf * 0.9, 2)
+            else:
+                conf = round(conf * 1.05, 2)
+
+
+            print(ok, brand, conf)
+            yield Finding(
+                kind=self.name,
+                value=raw,
+                span=m.span(),
+                confidence=conf,
+                normalized=digits,
+                extras={"luhn_valid": ok, "brand": brand},
             )
