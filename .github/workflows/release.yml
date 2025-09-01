@@ -1,0 +1,31 @@
+name: release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  id-token: write
+  contents: write
+  packages: write
+jobs:
+  build-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -U pip build
+      - run: python -m build
+      - name: Generate checksums
+        run: |
+          shasum -a 256 dist/* > dist/SHA256SUMS
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
+            dist/SHA256SUMS
