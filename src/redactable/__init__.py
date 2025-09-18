@@ -21,7 +21,13 @@ from .policy.engine import apply_policy
 # High-level API
 
 
-def apply(data: str, policy: str | Policy | Path | None = None, *, region: str = "GB") -> str:
+def apply(
+    data: str,
+    policy: str | Policy | Path | None = None,
+    *,
+    region: str = "GB",
+    return_findings: bool = False,
+) -> str | tuple[str, list[Finding]]:
     """
     Detect sensitive data in `data` and apply a redaction policy.
 
@@ -30,11 +36,16 @@ def apply(data: str, policy: str | Policy | Path | None = None, *, region: str =
         data: Input text to process.
         policy: Either a :class:`Policy` instance or a path to a YAML/JSON policy file.
         region: Default region for phone parsing (e.g., "GB", "US").
+        return_findings: If ``True``, return a tuple of ``(text, findings)``
+            so callers can inspect detection output. Defaults to ``False`` for
+            backwards compatibility.
 
 
     Returns:
-        The transformed text after applying the policy. If no policy is
-        provided, detection runs but the original text is returned unchanged.
+        The transformed text after applying the policy. If ``return_findings``
+        is ``True`` a tuple of ``(text, findings)`` is returned instead. When
+        no policy is provided the text is left unchanged, but detections are
+        still included in the returned findings when requested.
     """
     registry = DetectorRegistry.default(region=region)
     findings = list(registry.scan(data))
@@ -43,8 +54,13 @@ def apply(data: str, policy: str | Policy | Path | None = None, *, region: str =
             pol = policy
         else:
             pol = load_policy(Path(policy))
-        return apply_policy(pol, findings, data)
-    return data
+        result = apply_policy(pol, findings, data)
+    else:
+        result = data
+
+    if return_findings:
+        return result, findings
+    return result
 
 
 # --------------------------------------------------------------------
