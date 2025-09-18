@@ -11,9 +11,11 @@ redactable --policy gdpr.yaml input.log output.redacted.log
 from redactable import apply
 
 data = "Customer email: test@example.com"
-result = apply(data, policy="gdpr.yaml")
+result, findings = apply(data, policy="gdpr.yaml", return_findings=True)
 print(result)
 # → "Customer email: ****@example.com"
+print(findings[0])
+# → <Finding email value='test@example.com' conf=1.00>
 ```
 
 ## Pandas Integration
