@@ -11,6 +11,7 @@ applies rules to detector findings.
 from .model import Policy, Rule
 from .loader import load_policy
 from .engine import apply_policy
+from .builder import PolicyBuilder, PolicyFactory
 
 
-__all__ = ["Policy", "Rule", "load_policy", "apply_policy"]
+__all__ = ["Policy", "Rule", "load_policy", "apply_policy", "PolicyBuilder", "PolicyFactory"]
