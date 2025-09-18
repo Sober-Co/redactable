@@ -5,6 +5,7 @@ def test_email():
     text = "Contact: alice.smith+test@sub.example.co.uk and bad@mail"
     m = [x for x in run_all(text) if x.label == "EMAIL"]
     assert any("alice.smith+test@sub.example.co.uk" in x.value for x in m)
+    assert all("bad@mail" not in x.value for x in m)
 
 def test_credit_card_luhn():
     # Visa test PAN: 4111 1111 1111 1111
