@@ -21,7 +21,14 @@ def load_policy(path: str | Path) -> Policy:
     """
     p = Path(path)
     if not p.exists():
-        raise FileNotFoundError(f"Policy file not found: {p}")
+        candidate = None
+        if not p.is_absolute():
+            project_root = Path(__file__).resolve().parents[3]
+            candidate = project_root / "policies" / p
+        if candidate is not None and candidate.exists():
+            p = candidate
+        else:
+            raise FileNotFoundError(f"Policy file not found: {p}")
 
     text = p.read_text(encoding="utf-8")
     suffix = p.suffix.lower()
