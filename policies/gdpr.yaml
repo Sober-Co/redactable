@@ -1,189 +1,38 @@
-# policies/gdpr.yaml
 version: 1
-metadata:
-  id: gdpr-default
-  name: "GDPR Default Policy"
-  owner: "Sober & Co. DPO"
-  description: >
-    Enforce GDPR Art. 5 principles: data minimisation, purpose limitation,
-    integrity/confidentiality, and accountability. Provides default redaction
-    of identifiers, tokenisation/hashing of special categories, masking for
-    display/logs, and tamper-evident audit trails.
-  standard: "EU GDPR 2016/679"
-  created: "2025-08-29"
-  references:
-    - "Art. 5(1)(c): Data minimisation"
-    - "Art. 25: Data protection by design and by default"
-    - "Art. 30: Records of processing"
-    - "Art. 32: Security of processing"
-    - "Art. 35: DPIA requirement"
-
-defaults:
-  mode: fail_closed
-  action: redact
-  audit: required
-  masking:
-    default:
-      replacement: "█"
-      show_first: 0
-      show_last: 0
-  tokenisation:
-    algorithm: fpe_ff1
-    key_ref: "kms:alias/gdpr-token"
-    deterministic: true
-    reversible: true
-  hashing:
-    algorithm: sha256
-    salt_strategy: per_dataset
-    salt_env: "REDACTABLE_SALT"
-  visibility:
-    display_masked_only: true
-
-roles:
-  analyst:
-    can_view: [PSEUDONYM, MASKED, AUDIT]
-  researcher:
-    can_view: [PSEUDONYM, MASKED, AGGREGATES, AUDIT]
-  dpo:  # Data Protection Officer
-    can_view: [PSEUDONYM, MASKED, AUDIT, POLICY]
-  admin:
-    can_view: [AUDIT, POLICY]
-  # No role may see raw identifiers without explicit lawful basis
-
-# ---------- Rules ----------
+name: gdpr
+description: |
+  Default GDPR-oriented policy that minimises exposure of common identifiers
+  by masking direct identifiers and tokenizing high-risk attributes.
 rules:
-  # Identifiers (Art. 4) – must be pseudonymised or masked
-  - id: email_redact
-    when:
-      detector: EMAIL
-    transform: mask_email
-    audit_reason: "GDPR Art. 4/5 – Identifiers must be minimised"
-
-  - id: phone_redact
-    when:
-      detector: PHONE
-    transform: mask_phone
-    audit_reason: "GDPR Art. 4/5 – Identifiers must be minimised"
-
-  - id: nationalid_tokenise
-    when:
-      detector: NATIONAL_ID
-    transform: tokenise_fpe
-    audit_reason: "GDPR Art. 9 – Special categories of personal data"
-
-  - id: ip_pseudonymise
-    when:
-      detector: IP_ADDRESS
-    transform: hash_sha256_salt
-    audit_reason: "GDPR Recital 26 – Pseudonymisation"
-
-  - id: location_generalise
-    when:
-      detector: LOCATION
-    transform: generalise_location
-    params:
-      granularity: "region"
-    audit_reason: "GDPR Art. 5(1)(c) – Data minimisation"
-
-  - id: dob_tokenise
-    when:
-      detector: DATE_OF_BIRTH
-    transform: tokenise_fpe
-    audit_reason: "GDPR Art. 9 – Special categories"
-
+  - id: email_mask
+    field: email
+    action: mask
+    keep_head: 0
+    keep_tail: 2
+    mask_glyph: "*"
+  - id: phone_mask
+    field: phone
+    action: mask
+    keep_head: 0
+    keep_tail: 4
+    mask_glyph: "*"
+  - id: national_id_tokenize
+    field: national_id
+    action: tokenize
+  - id: ip_hash
+    field: ip_address
+    action: redact
+    replacement: "[REDACTED:IP]"
+  - id: location_redact
+    field: location
+    action: redact
+    replacement: "[REDACTED:LOCATION]"
+  - id: dob_tokenize
+    field: date_of_birth
+    action: tokenize
   - id: name_mask
-    when:
-      detector: PERSON_NAME
-    transform: mask_name
-    audit_reason: "GDPR Art. 4 – Identifiers"
-
-  # Free text fields – apply entropy + NLP detectors
-  - id: free_text_scrub
-    when:
-      detector: FREE_TEXT
-    transform: redact_entities
-    audit_reason: "GDPR Art. 32 – Secure processing of unstructured data"
-
-# ---------- Field overrides ----------
-field_overrides:
-  - fields: ["email","e_mail","user_email"]
-    apply_rules: ["email_redact"]
-  - fields: ["phone","phone_number","mobile"]
-    apply_rules: ["phone_redact"]
-  - fields: ["ssn","nin","national_id","nino"]
-    apply_rules: ["nationalid_tokenise"]
-  - fields: ["ip","ip_address","client_ip"]
-    apply_rules: ["ip_pseudonymise"]
-  - fields: ["dob","birth_date","date_of_birth"]
-    apply_rules: ["dob_tokenise"]
-  - fields: ["name","full_name","given_name","surname"]
-    apply_rules: ["name_mask"]
-
-# ---------- Detectors ----------
-detectors:
-  EMAIL:
-    type: regex
-    pattern: "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}"
-  PHONE:
-    type: regex
-    pattern: "(\\+\\d{1,3}[ -]?)?(\\(?\\d{2,4}\\)?[ -]?\\d{3,4}[ -]?\\d{3,4})"
-  NATIONAL_ID:
-    type: heuristic
-    supported_regions: ["UK","EU"]
-  IP_ADDRESS:
-    type: regex
-    patterns:
-      - "\\b\\d{1,3}(?:\\.\\d{1,3}){3}\\b"    # IPv4
-      - "([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}" # IPv6
-  LOCATION:
-    type: nlp
-    model: spacy_loc
-  DATE_OF_BIRTH:
-    type: regex
-    patterns:
-      - "\\b(19|20)\\d{2}[-/.](0[1-9]|1[0-2])[-/.](0[1-9]|[12]\\d|3[01])\\b"
-  PERSON_NAME:
-    type: nlp
-    model: spacy_ner_name
-  FREE_TEXT:
-    type: ml
-    detectors: [EMAIL, PHONE, NATIONAL_ID, PERSON_NAME, LOCATION]
-
-# ---------- Transforms ----------
-transforms:
-  mask_email:
-    type: mask
-    strategy: partial_email
-  mask_phone:
-    type: mask
-    strategy: last4
-  mask_name:
-    type: mask
-    strategy: initials
-  tokenise_fpe:
-    type: tokenise
-    algorithm: fpe_ff1
-    key_ref: "kms:alias/gdpr-token"
-    deterministic: true
-  hash_sha256_salt:
-    type: hash
-    algorithm: sha256
-    salt_env: "REDACTABLE_SALT"
-  generalise_location:
-    type: generalise
-    levels: ["country","region","city"]
-  redact_entities:
-    type: redact
-    replacement: "[ENTITY]"
-
-# ---------- Observability ----------
-observability:
-  audit_log:
-    format: jsonl
-    path: "audits/gdpr.jsonl"
-    include_decision_trace: true
-    hash_original: true
-  metrics:
-    opentelemetry: true
-    counters: ["detector_matches","transforms_applied","violations_blocked"]
-    never_log_values: true
+    field: person_name
+    action: mask
+    keep_head: 1
+    keep_tail: 0
+    mask_glyph: "·"
