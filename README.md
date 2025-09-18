@@ -53,7 +53,17 @@ _(pre-release, local install via pip install -e . until PyPI publish)_
 ### CLI Usage
 
 ````bash
-redactable --policy gdpr.yaml input.log output.redacted.log
+# Built-in GDPR defaults, no YAML required
+redactable --policy gdpr < input.log > output.redacted.log
+
+# Or supply your own policy file when ready
+redactable --policy ./policies/custom.yaml < input.log > output.redacted.log
+````
+
+List the bundled privacy/compliance templates:
+
+````bash
+redactable --list-policies
 ````
 
 

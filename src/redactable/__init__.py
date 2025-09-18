@@ -25,7 +25,8 @@ def apply(data: str, policy: str | None = None, *, region: str = "GB") -> str:
 
     Args:
     data: Input text to process.
-    policy: Optional path to a YAML/JSON policy file.
+    policy: Optional path to a YAML/JSON policy file, or the name of a
+        built-in template such as "gdpr", "pci" or "hipaa".
     region: Default region for phone parsing (e.g., "GB", "US").
 
 
