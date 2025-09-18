@@ -1,16 +1,8 @@
-"""
-DetectorRegistry
-
-Collects detectors and provides a unified scan() interface.
-
-Responsibilities:
-- Hold a list of active detectors.
-- Provide default() factory with built-in regex + entropy detectors.
-- Allow dynamic registration and unregistration.
-- Aggregate results from all detectors.
-"""
+"""Detector registry and unified scanning interface."""
 
 from __future__ import annotations
+
+import logging
 from typing import List, Optional
 
 from .base import Detector, Finding
@@ -23,6 +15,9 @@ from .regexes import (
     IBANDetector,
 )
 from .entropy import HighEntropyTokenDetector
+
+logger = logging.getLogger(__name__)
+
 
 class DetectorRegistry:
     """
@@ -66,12 +61,8 @@ class DetectorRegistry:
         for d in self.detectors:
             try:
                 findings.extend(d.detect(text))
-            except Exception as e:  # fail-safe
-                findings.append(Finding(
-                    kind="error",
-                    value=getattr(d, "name", "unknown"),
-                    span=(0, 0),
-                    confidence=0.0,
-                    extras={"error": str(e)},
-                ))
+            except Exception:  # fail-safe
+                logger.exception(
+                    "Detector %s raised an exception during scan", getattr(d, "name", "unknown")
+                )
         return sorted(findings, key=lambda f: (f.span[0], f.span[1]))
