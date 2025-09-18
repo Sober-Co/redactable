@@ -2,7 +2,7 @@
 from pathlib import Path
 import json
 from .model import Policy
-from .defaults import get_builtin_policy
+from .defaults import get_builtin_policy, is_builtin_policy
 
 try:
     import yaml  # type: ignore
@@ -23,12 +23,13 @@ def load_policy(path: str | Path) -> Policy:
     p = Path(path)
     if not p.exists():
         if isinstance(path, (str, Path)):
-            try:
-                return get_builtin_policy(str(path))
-            except KeyError as exc:
+            candidate = str(path)
+            if "/" not in candidate and "\\" not in candidate:
+                if is_builtin_policy(candidate):
+                    return get_builtin_policy(candidate)
                 raise FileNotFoundError(
-                    f"Policy file not found: {p}. No built-in policy named {path!r}."
-                ) from exc
+                    f"Policy file not found: {p}. No built-in policy named {candidate!r}."
+                )
         raise FileNotFoundError(f"Policy file not found: {p}")
 
     text = p.read_text(encoding="utf-8")

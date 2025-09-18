@@ -1,3 +1,5 @@
+import pytest
+
 from redactable.policy.defaults import (
     builtin_policy_names,
     describe_builtin_policies,
@@ -33,3 +35,12 @@ def test_loader_accepts_aliases_and_suffixes():
     assert gdpr_suffix.name == "gdpr"
 
     assert is_builtin_policy("hipaa")
+
+
+def test_loader_does_not_fallback_for_missing_paths_with_directories(tmp_path):
+    missing_in_tmp = tmp_path / "policies" / "gdpr.yaml"
+    with pytest.raises(FileNotFoundError):
+        load_policy(missing_in_tmp)
+
+    with pytest.raises(FileNotFoundError):
+        load_policy("missing/gdpr.yaml")
