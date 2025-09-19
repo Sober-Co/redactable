@@ -17,4 +17,5 @@ rules:
   - **Example:** Analyst sees masked, Admin sees tokenised.
 
 ## Safe Defaults
-- Fail-closed behaviour: if no matching policy → data is redacted.
+- By default, data is unchanged when no policy rule matches it.
+- To enforce fail-closed behaviour, add a catch-all rule (for example, a final regex such as `.*`) that redacts anything not matched by earlier, more specific rules.

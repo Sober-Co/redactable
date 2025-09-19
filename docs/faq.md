@@ -13,4 +13,4 @@ Regex alone misses context and governance. Redactable combines regex, entropy de
 - Works locally, not cloud-only
 
 ### What happens if no policy matches?
-Fail-closed: unknown fields are **redacted by default**.
+Data is left unchanged unless a policy rule matches it. To guarantee fail-closed behaviour, add a final "catch-all" rule in your policy (for example, a regex that matches `.*` and redacts) so anything that slips past specific rules is still removed.

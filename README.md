@@ -34,7 +34,7 @@ Organisations today face:
 - **Policy-first:** declarative, auditable YAML/JSON policies.  
 - **Cross-modal:** text, structured data, logs; extensible to images/audio later.  
 - **Pluggable:** detectors, transformations, integrations as plugins.  
-- **Safe defaults:** fail-closed behaviour (no silent leaks).  
+- **Safe defaults:** data stays unchanged unless a policy rule matches; add a catch-all rule when you need fail-closed behaviour.
 - **Enterprise-aligned:** GDPR, PCI, HIPAA compliance packs.  
 - **Developer-friendly:** CLI, Python SDK, Pandas integration.  
 
@@ -137,7 +137,7 @@ print(redacted)
 
 - Role-based redaction (analyst vs admin).
 
-- Fail-closed defaults.
+- Configurable fail-closed behaviour via catch-all policy rules.
 
 ### ✅ Integrations
 
