@@ -1,3 +1,5 @@
+import pytest
+
 from redactable.detectors.run import run_all
 from redactable.detectors.utils import nhs_check, luhn_check, iban_check
 
@@ -75,3 +77,46 @@ def test_entropy_long_random_string():
     text = f"token={long_secret}"
     matches = [x for x in run_all(text) if x.label == "SECRET"]
     assert any(long_secret in x.value for x in matches)
+
+
+def test_schema_hints_from_context_schema_mapping():
+    context = {
+        "schema": {
+            "Email": {"type": "string"},
+            "user_id": {"type": "uuid"},
+            "cardNumber": {"type": "string"},
+            "notes": {"type": "text"},
+        }
+    }
+
+    matches = [m for m in run_all("", context=context) if m.label in {"EMAIL", "CREDIT_CARD"}]
+    assert {m.value for m in matches} == {"Email", "cardNumber"}
+    for match in matches:
+        assert match.start == 0 and match.end == 0
+        assert match.meta["source"] == "schema"
+        assert match.meta["field"] in {"Email", "cardNumber"}
+        assert match.confidence == pytest.approx(0.6)
+
+
+def test_schema_hints_handles_nested_iterables():
+    context = {
+        "schema": {
+            "fields": [
+                {"name": "customerDOB"},
+                {"name": "PHONE_NUMBER"},
+                {"name": "address"},
+            ]
+        }
+    }
+
+    matches = [m for m in run_all("", context=context) if m.label in {"DATE_DOB", "PHONE"}]
+    assert len(matches) == 2
+
+    dob_match = next(m for m in matches if m.label == "DATE_DOB")
+    phone_match = next(m for m in matches if m.label == "PHONE")
+
+    assert dob_match.value == "customerDOB"
+    assert dob_match.meta["schema_meta"] == {"name": "customerDOB"}
+
+    assert phone_match.value == "PHONE_NUMBER"
+    assert phone_match.meta["schema_meta"] == {"name": "PHONE_NUMBER"}
