@@ -1,7 +1,9 @@
 import pytest
+from types import SimpleNamespace
 
 from redactable.detectors.run import run_all
 from redactable.detectors.utils import nhs_check, luhn_check, iban_check
+from redactable.detectors import regexes
 
 def test_email():
     text = "Contact: alice.smith+test@sub.example.co.uk and bad@mail"
@@ -22,7 +24,47 @@ def test_phone_fallback_does_not_truncate_card_numbers():
     phone_matches = [x for x in run_all(text) if x.label == "PHONE"]
     assert phone_matches == []
 
-    
+
+def test_phone_libphonenumber_span_trimming(monkeypatch):
+    text = " phone (+07123…"
+    plus_index = text.index("+")
+    ellipsis_index = text.index("…")
+    fake_number = object()
+
+    class FakePhoneNumberMatcher:
+        def __init__(self, text_arg, region):
+            assert text_arg == text
+            assert region == "GB"
+            self._match = SimpleNamespace(
+                start=plus_index - 1,  # include leading "("
+                end=ellipsis_index,
+                number=fake_number,
+            )
+
+        def __iter__(self):
+            yield self._match
+
+    fake_phonenumbers = SimpleNamespace(
+        PhoneNumberMatcher=FakePhoneNumberMatcher,
+        PhoneNumberFormat=SimpleNamespace(E164="E164"),
+        format_number=lambda num, fmt: "+07123",
+        is_valid_number=lambda num: True,
+        region_code_for_number=lambda num: "GB",
+        number_type=lambda num: "MOBILE",
+    )
+
+    monkeypatch.setattr(regexes, "phonenumbers", fake_phonenumbers)
+
+    detector = regexes.PhoneDetector()
+    findings = list(detector.detect(text))
+
+    assert len(findings) == 1
+    finding = findings[0]
+    assert finding.value == "+07123"
+    assert finding.span == (plus_index, ellipsis_index)
+    assert finding.normalized.endswith("07123")
+
+
 def test_credit_card_confidence_branding():
     branded_text = "Card: 4111 1111 1111 1111"
     branded = [x for x in run_all(branded_text) if x.label == "CREDIT_CARD"]

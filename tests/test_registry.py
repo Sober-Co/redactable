@@ -31,3 +31,25 @@ def test_scan_logs_and_skips_detector_errors(caplog):
     assert findings == [expected]
     error_messages = [record.getMessage() for record in caplog.records]
     assert any("broken" in message for message in error_messages)
+
+
+def test_default_registry_fallback_phone_skips_cards(monkeypatch):
+    from redactable.detectors import regexes
+
+    monkeypatch.setattr(regexes, "phonenumbers", None)
+    registry = DetectorRegistry.default(region="GB")
+
+    findings = registry.scan("4111 1111 1111 1111")
+
+    assert all(f.kind != "phone" for f in findings)
+
+
+def test_default_registry_fallback_phone_handles_international(monkeypatch):
+    from redactable.detectors import regexes
+
+    monkeypatch.setattr(regexes, "phonenumbers", None)
+    registry = DetectorRegistry.default(region="GB")
+
+    findings = registry.scan("+4412345678901")
+
+    assert any(f.kind == "phone" for f in findings)
