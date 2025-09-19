@@ -94,6 +94,7 @@ def _infer_action(
         return value
 
     transform_name = rule.get("transform")
+    unknown_transform = False
     if isinstance(transform_name, str) and transform_name.strip():
         transform_key = transform_name.strip()
         cfg = transform_types.get(transform_key)
@@ -106,11 +107,45 @@ def _infer_action(
         action = _guess_action_from_name(transform_key)
         if action:
             return action
+        unknown_transform = True
 
-    if isinstance(default_action, str) and default_action.strip():
+    if not unknown_transform and isinstance(default_action, str) and default_action.strip():
         return default_action
 
     return None
+
+
+def _merge_transform_settings(
+    rule: dict[str, Any],
+    transform: Mapping[str, Any] | None,
+    action: str,
+) -> None:
+    if not isinstance(transform, Mapping):
+        return
+
+    if action == "mask":
+        for source_key, target_key in (
+            ("show_first", "keep_head"),
+            ("show_last", "keep_tail"),
+            ("keep_first", "keep_head"),
+            ("keep_last", "keep_tail"),
+            ("keep_head", "keep_head"),
+            ("keep_tail", "keep_tail"),
+        ):
+            value = transform.get(source_key)
+            if isinstance(value, int) and target_key not in rule:
+                rule[target_key] = value
+        glyph = transform.get("mask_glyph") or transform.get("glyph") or transform.get("replacement")
+        if isinstance(glyph, str) and glyph.strip() and "mask_glyph" not in rule:
+            rule["mask_glyph"] = glyph
+    elif action == "redact":
+        replacement = transform.get("replacement")
+        if isinstance(replacement, str) and replacement.strip() and "replacement" not in rule:
+            rule["replacement"] = replacement
+    elif action == "tokenize":
+        salt = transform.get("salt")
+        if isinstance(salt, str) and salt.strip() and "salt" not in rule:
+            rule["salt"] = salt
 
 
 def _prepare_rules(
@@ -140,6 +175,13 @@ def _prepare_rules(
         rule.setdefault("id", str(raw_rule.get("id", f"rule_{len(rules)}")))
         rule["field"] = field
         rule["action"] = action
+
+        transform_name = raw_rule.get("transform")
+        transform_cfg: Mapping[str, Any] | None = None
+        if isinstance(transform_name, str) and transform_name.strip():
+            transform_cfg = transform_types.get(transform_name.strip())
+        _merge_transform_settings(rule, transform_cfg, action)
+
         rules.append(rule)
 
     return rules
@@ -183,9 +225,9 @@ def _normalize_policy_payload(data: Any, source: Path) -> dict[str, Any]:
     if isinstance(raw_transforms, Mapping):
         for key, value in raw_transforms.items():
             if isinstance(value, Mapping):
-                transform_types[key] = value.get("type")
-            else:
                 transform_types[key] = value
+            else:
+                transform_types[key] = {"type": value}
 
     rules = _prepare_rules(
         data,
