@@ -14,6 +14,19 @@ import re
 from dataclasses import dataclass
 from typing import Any, Iterable, Optional, Protocol
 
+__all__ = [
+    "Match",
+    "Finding",
+    "Detector",
+    "register",
+    "get",
+    "detectors_for",
+    "all_detectors",
+    "digits_only",
+    "luhn_ok",
+    "guess_card_brand",
+]
+
 @dataclass(slots=True)
 class Match:
     """A lightweight finding produced by detectors registered in this module."""
@@ -27,12 +40,13 @@ class Match:
 
 
 class Detector(Protocol):
-    """Protocol that built-in detectors adhere to.
+    """Protocol implemented by built-in detectors.
 
     Detectors expose a :pydata:`name`, a collection of :pydata:`labels`, and a
-    :py:meth:`detect` method that yields :class:`Match` instances.  The optional
-    ``context`` keyword argument allows callers to pass detector-specific
-    configuration without breaking the common interface.
+    :py:meth:`detect` method matching ``detect(text: str, *, context: Optional[
+    dict[str, Any]] = None) -> Iterable[Match]``.  The optional ``context``
+    keyword argument allows callers to pass detector-specific configuration
+    without breaking the common interface.
     """
 
     name: str
