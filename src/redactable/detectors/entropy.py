@@ -12,9 +12,10 @@ Intended as a complement to regex-based detectors.
 """
 
 import re
-from .base import Match, register, Finding, Detector
+from typing import Any, Iterable, Optional
+
+from .base import Match, register, Finding
 from .utils import shannon_entropy, looks_like_secret
-from typing import Iterable
 # --------------------------------------------------------------------
 # Regex pattern: matches candidate secrets
 BASELIKE_PATTERN = re.compile(
@@ -45,7 +46,12 @@ class HighEntropyTokenDetector:
         self.entropy_threshold = entropy_threshold
         self.min_len = min_len
 
-    def detect(self, text: str) -> Iterable[Finding]:
+    def detect(
+        self,
+        text: str,
+        *,
+        context: Optional[dict[str, Any]] = None,
+    ) -> Iterable[Finding]:
         """
         Scan text for high-entropy sequences.
         Yields Finding objects for each match.
@@ -76,7 +82,12 @@ class EntropyDetector:
     def __init__(self, *, threshold: float = 3.5):
         self.threshold = threshold
 
-    def detect(self, text: str, *, context=None):
+    def detect(
+        self,
+        text: str,
+        *,
+        context: Optional[dict[str, Any]] = None,
+    ) -> Iterable[Match]:
         threshold = (context or {}).get("entropy_threshold", self.threshold)
         for m in _TOKEN.finditer(text):
             token = m.group(1)

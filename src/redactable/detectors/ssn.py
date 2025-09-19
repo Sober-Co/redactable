@@ -1,5 +1,8 @@
 from __future__ import annotations
+
 import re
+from typing import Any, Iterable, Optional
+
 from .base import Match, register
 
 _SSN = re.compile(r'(?<!\d)(\d{3}-?\d{2}-?\d{4})(?!\d)')
@@ -16,7 +19,12 @@ class SSNDetector:
     name = "ssn"
     labels = ("SSN",)
 
-    def detect(self, text: str, *, context=None):
+    def detect(
+        self,
+        text: str,
+        *,
+        context: Optional[dict[str, Any]] = None,
+    ) -> Iterable[Match]:
         for m in _SSN.finditer(text):
             raw = m.group(1)
             if _valid_ssn(raw):
