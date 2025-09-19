@@ -95,12 +95,18 @@ except Exception:  # pragma: no cover
 # Simple phone regex fallback
 RE_PHONE = re.compile(
     r"""
+    (?<!\d)                    # do not start in the middle of a digit run
     (?:\+\d{1,3}[\s-]?)?      # optional country code
     (?:\(?\d{2,4}\)?[\s-]?)?  # optional area code
     \d{3,4}[\s-]?\d{3,4}      # subscriber number
+    (?![\s-]?\d)              # ensure the number does not continue
     """,
     re.VERBOSE,
 )
+
+# Helpers to detect digit runs neighbouring phone candidates
+RE_PHONE_PREFIX_RUN = re.compile(r"(?:\d[\s-]?)+$")
+RE_PHONE_SUFFIX_RUN = re.compile(r"^(?:[\s-]?\d)+")
 
 class PhoneDetector:
     """Detect phone numbers via regex + optional libphonenumber."""
@@ -135,6 +141,30 @@ class PhoneDetector:
         # Fallback regex-only detection
         for m in RE_PHONE.finditer(text):
             raw = m.group(0)
+
+            # Skip obvious credit card numbers that happen to match
+            if RE_CARD.fullmatch(raw):
+                continue
+
+            start, end = m.span()
+            prefix_match = RE_PHONE_PREFIX_RUN.search(text, 0, start)
+            suffix_match = RE_PHONE_SUFFIX_RUN.match(text, end)
+
+            prefix_digits = (
+                sum(ch.isdigit() for ch in prefix_match.group())
+                if prefix_match
+                else 0
+            )
+            suffix_digits = (
+                sum(ch.isdigit() for ch in suffix_match.group())
+                if suffix_match
+                else 0
+            )
+
+            # Guard against slicing into digit runs (e.g. credit card groups)
+            if prefix_digits >= 4 or suffix_digits >= 4:
+                continue
+
             yield Finding(
                 kind=self.name,
                 value=raw,

@@ -14,6 +14,13 @@ def test_credit_card_luhn():
     assert len(m) == 1 and luhn_check('4111111111111111')
 
 
+def test_phone_fallback_does_not_truncate_card_numbers():
+    # Ensure fallback phone regex doesn't partially consume card numbers
+    text = "Card: 4111 1111 1111 1111"
+    phone_matches = [x for x in run_all(text) if x.label == "PHONE"]
+    assert phone_matches == []
+
+    
 def test_credit_card_confidence_branding():
     branded_text = "Card: 4111 1111 1111 1111"
     branded = [x for x in run_all(branded_text) if x.label == "CREDIT_CARD"]
