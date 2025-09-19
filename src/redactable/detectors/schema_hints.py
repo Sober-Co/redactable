@@ -24,7 +24,7 @@ _HINTS = {
 
 class SchemaHintDetector:
     name = "schema_hints"
-    labels = tuple(set(_HINTS.values()))
+    labels = tuple(dict.fromkeys(_HINTS.values()))
     confidence = 0.6
 
     def detect(self, text: str, *, context=None):
