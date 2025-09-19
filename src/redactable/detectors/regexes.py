@@ -108,6 +108,25 @@ RE_PHONE = re.compile(
 RE_PHONE_PREFIX_RUN = re.compile(r"(?:\d[\s-]?)+$")
 RE_PHONE_SUFFIX_RUN = re.compile(r"^(?:[\s-]?\d)+")
 
+
+def _looks_like_pan(candidate: str) -> bool:
+    """Heuristic guard for card-like numbers in the phone fallback."""
+
+    digits = digits_only(candidate)
+    if not (13 <= len(digits) <= 19):
+        return False
+
+    groups = [g for g in re.split(r"[\s-]", candidate) if g]
+    if len(groups) <= 1:
+        # Continuous 13-19 digits – highly card-like.
+        return True
+
+    if all(len(g) == 4 for g in groups):
+        return True
+
+    fourish = sum(len(g) == 4 for g in groups)
+    return len(groups) >= 3 and fourish >= len(groups) - 1
+
 class PhoneDetector:
     """Detect phone numbers via regex + optional libphonenumber."""
     name = "phone"
@@ -140,13 +159,31 @@ class PhoneDetector:
 
         # Fallback regex-only detection
         for m in RE_PHONE.finditer(text):
-            raw = m.group(0)
+            start, end = m.span()
+            raw = text[start:end]
 
             # Skip obvious credit card numbers that happen to match
             if RE_CARD.fullmatch(raw):
                 continue
 
-            start, end = m.span()
+            # Expand the credit-card guard by checking neighbouring 4-digit groups.
+            expanded_start = start
+            expanded_end = end
+            left_group = re.search(r"(\d{4}[\s-])$", text[:start])
+            if left_group:
+                expanded_start = left_group.start()
+            right_group = re.match(r"([\s-]?\d{4})", text[end:])
+            if right_group:
+                expanded_end = end + right_group.end()
+
+            if expanded_start != start or expanded_end != end:
+                expanded = text[expanded_start:expanded_end]
+                if RE_CARD.fullmatch(expanded):
+                    continue
+
+            if _looks_like_pan(raw):
+                continue
+
             prefix_match = RE_PHONE_PREFIX_RUN.search(text, 0, start)
             suffix_match = RE_PHONE_SUFFIX_RUN.match(text, end)
 
