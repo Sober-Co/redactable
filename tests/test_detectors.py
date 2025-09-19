@@ -65,3 +65,13 @@ def test_entropy():
     text = f"api key: {likely}"
     m = [x for x in run_all(text) if x.label == "SECRET"]
     assert len(m) >= 1
+
+
+def test_entropy_long_random_string():
+    long_secret = (
+        "1972308aa69828cadf41f9ca7bf252715521bb76b1762fa3da47c41076d422a0"
+        "856177c1a70fbd759c8c4a820748a21c07abab0989749afaf391b279a5c67aae"
+    )
+    text = f"token={long_secret}"
+    matches = [x for x in run_all(text) if x.label == "SECRET"]
+    assert any(long_secret in x.value for x in matches)
