@@ -1,4 +1,6 @@
 import re
+from typing import Any, Iterable, Optional
+
 from .base import Match, register
 from .utils import luhn_check
 
@@ -20,7 +22,12 @@ class CreditCardDetector:
     name = "credit_card"
     labels = ("CREDIT_CARD",)
 
-    def detect(self, text: str, *, context=None):
+    def detect(
+        self,
+        text: str,
+        *,
+        context: Optional[dict[str, Any]] = None,
+    ) -> Iterable[Match]:
         for m in _PAN.finditer(text):
             raw = m.group(1)
             digits = ''.join(ch for ch in raw if ch.isdigit())

@@ -1,4 +1,6 @@
 import re
+from typing import Any, Iterable, Optional
+
 from .base import Match, register
 from .utils import iban_check
 
@@ -8,7 +10,12 @@ class IBANDetector:
     name = "iban"
     labels = ("IBAN",)
 
-    def detect(self, text: str, *, context=None):
+    def detect(
+        self,
+        text: str,
+        *,
+        context: Optional[dict[str, Any]] = None,
+    ) -> Iterable[Match]:
         for m in _IBAN.finditer(text):
             token = m.group(1).upper()
             if iban_check(token):

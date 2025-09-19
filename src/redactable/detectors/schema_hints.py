@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterable, Mapping
+from typing import Any, Optional
 
 from .base import Match, register
 
@@ -27,7 +28,12 @@ class SchemaHintDetector:
     labels = tuple(dict.fromkeys(_HINTS.values()))
     confidence = 0.6
 
-    def detect(self, text: str, *, context=None):
+    def detect(
+        self,
+        text: str,
+        *,
+        context: Optional[dict[str, Any]] = None,
+    ) -> Iterable[Match]:
         schema = (context or {}).get("schema")
         if not schema:
             return []

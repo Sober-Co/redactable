@@ -1,5 +1,8 @@
 from __future__ import annotations
+
 import re
+from typing import Any, Iterable, Optional
+
 from .base import Match, register
 
 # E.164 (+441234567890), simple UK patterns (07..., 01/02... with spaces)
@@ -10,7 +13,12 @@ class PhoneDetector:
     name = "phone"
     labels = ("PHONE",)
 
-    def detect(self, text: str, *, context=None):
+    def detect(
+        self,
+        text: str,
+        *,
+        context: Optional[dict[str, Any]] = None,
+    ) -> Iterable[Match]:
         for m in _E164.finditer(text):
             yield Match("PHONE", m.start(1), m.end(1), m.group(1), 0.9, {"format": "E164"})
         for m in _UK.finditer(text):
