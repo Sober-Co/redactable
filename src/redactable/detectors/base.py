@@ -1,42 +1,37 @@
-"""
-Core types and helpers for detectors.
+"""Core types and helpers shared by detector implementations."""
 
-Contents:
-- Finding: dataclass representing a detected entity.
-- Detector: Protocol interface that all detectors must implement.
-- Shared helper functions: digits_only, luhn_ok, guess_card_brand.
-"""
+from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Iterable, Optional, Protocol, Tuple, Dict, Any
 import re
-
-# --------------------------------------------------------------------
-# Shared type aliases
-Span = Tuple[int, int]
-Extras = Dict[str, Any]
-
-
 from dataclasses import dataclass
-from typing import Iterable, Protocol, TypedDict, Optional, Dict, Any, List
+from typing import Any, Iterable, Optional, Protocol
 
 @dataclass(slots=True)
 class Match:
-    label: str               # e.g. "EMAIL", "CREDIT_CARD"
-    start: int               # byte/char index in the input text
+    """A raw detection result produced by lightweight detectors."""
+
+    label: str                # e.g. "EMAIL", "CREDIT_CARD"
+    start: int                # byte/char index in the input text
     end: int
-    value: str               # matched text (pre-transform)
-    confidence: float = 1.0  # 0..1
-    meta: dict[str, Any] = None
+    value: str                # matched text (pre-transform)
+    confidence: float = 1.0   # 0..1
+    meta: dict[str, Any] | None = None
+
 
 class Detector(Protocol):
+    """Protocol implemented by detectors registered via :func:`register`."""
+
     name: str
     labels: tuple[str, ...]
-    def detect(self, text: str, *, context: Optional[dict[str, Any]] = None) -> Iterable[Match]: ...
+
+    def detect(
+        self, text: str, *, context: Optional[dict[str, Any]] = None
+    ) -> Iterable[Match]:
+        """Yield :class:`Match` objects for ``text``."""
 
 # Simple registry
-_REGISTRY: Dict[str, Detector] = {}
-_LABEL_TO_DETECTORS: Dict[str, List[str]] = {}
+_REGISTRY: dict[str, Detector] = {}
+_LABEL_TO_DETECTORS: dict[str, list[str]] = {}
 
 def register(detector: Detector) -> None:
     _REGISTRY[detector.name] = detector
@@ -46,8 +41,10 @@ def register(detector: Detector) -> None:
 def get(name: str) -> Detector:
     return _REGISTRY[name]
 
+
 def detectors_for(label: str) -> list[Detector]:
-    return [ _REGISTRY[n] for n in _LABEL_TO_DETECTORS.get(label, []) ]
+    return [_REGISTRY[n] for n in _LABEL_TO_DETECTORS.get(label, [])]
+
 
 def all_detectors() -> list[Detector]:
     return list(_REGISTRY.values())
@@ -67,10 +64,10 @@ class Finding:
     """
     kind: str
     value: str
-    span: Span
+    span: tuple[int, int]
     confidence: float
     normalized: Optional[str] = None
-    extras: Extras | None = None
+    extras: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         if not (0.0 <= self.confidence <= 1.0):
@@ -80,17 +77,6 @@ class Finding:
 
     def __str__(self) -> str:
         return f"<Finding {self.kind} value='{self.value}' conf={self.confidence:.2f}>"
-
-
-class Detector(Protocol):
-    """
-    Protocol that all detectors must follow.
-    Each detector must expose a `name` and a `detect` method.
-    """
-    name: str
-
-    def detect(self, text: str) -> Iterable[Finding]: ...
-
 # --------------------------------------------------------------------
 # Shared helpers
 
