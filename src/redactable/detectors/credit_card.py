@@ -24,13 +24,19 @@ class CreditCardDetector:
         for m in _PAN.finditer(text):
             raw = m.group(1)
             digits = ''.join(ch for ch in raw if ch.isdigit())
+            brand = _brand(digits)
             if 13 <= len(digits) <= 19 and luhn_check(digits):
+                confidence = 0.95
+                if brand:
+                    confidence = min(1.0, confidence + 0.03)
+                else:
+                    confidence = max(0.0, confidence - 0.03)
                 yield Match(
                     label="CREDIT_CARD",
                     start=m.start(1), end=m.end(1),
                     value=raw,
-                    confidence=0.98,
-                    meta={"digits": digits, "brand": _brand(digits)}
+                    confidence=confidence,
+                    meta={"digits": digits, "brand": brand}
                 )
 
 register(CreditCardDetector())

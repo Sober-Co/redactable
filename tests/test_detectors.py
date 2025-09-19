@@ -20,6 +20,22 @@ def test_phone_fallback_does_not_truncate_card_numbers():
     phone_matches = [x for x in run_all(text) if x.label == "PHONE"]
     assert phone_matches == []
 
+    
+def test_credit_card_confidence_branding():
+    branded_text = "Card: 4111 1111 1111 1111"
+    branded = [x for x in run_all(branded_text) if x.label == "CREDIT_CARD"]
+    assert len(branded) == 1
+    branded_match = branded[0]
+    assert branded_match.meta["brand"] == "VISA"
+
+    unbranded_text = "Other: 6011 1111 1111 1117"
+    unbranded = [x for x in run_all(unbranded_text) if x.label == "CREDIT_CARD"]
+    assert len(unbranded) == 1
+    unbranded_match = unbranded[0]
+    assert unbranded_match.meta["brand"] is None
+
+    assert branded_match.confidence > unbranded_match.confidence
+
 def test_iban():
     # Example GB: GB82 WEST 1234 5698 7654 32
     text = "Payout to IBAN GB82WEST12345698765432 today."
