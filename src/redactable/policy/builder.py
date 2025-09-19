@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Iterable, Iterator
+from typing import Iterable, Iterator, TYPE_CHECKING
 
 from .model import Policy, Rule
+
+
+if TYPE_CHECKING:  # pragma: no cover - for typing only
+    from .model import RuleWhere
 
 
 class PolicyBuilder:
@@ -59,6 +63,7 @@ class PolicyBuilder:
         *,
         id: str | None = None,
         replacement: str | None = None,
+        where: dict[str, object] | "RuleWhere" | None = None,
     ) -> "PolicyBuilder":
         """Append a redact rule."""
 
@@ -68,6 +73,8 @@ class PolicyBuilder:
         }
         if replacement is not None:
             data["replacement"] = replacement
+        if where is not None:
+            data["where"] = where
         return self.rule(id=id, **data)
 
     def mask(
@@ -78,6 +85,7 @@ class PolicyBuilder:
         keep_head: int | None = None,
         keep_tail: int | None = None,
         mask_glyph: str | None = None,
+        where: dict[str, object] | "RuleWhere" | None = None,
     ) -> "PolicyBuilder":
         """Append a mask rule."""
 
@@ -91,6 +99,8 @@ class PolicyBuilder:
             data["keep_tail"] = keep_tail
         if mask_glyph is not None:
             data["mask_glyph"] = mask_glyph
+        if where is not None:
+            data["where"] = where
         return self.rule(id=id, **data)
 
     def tokenize(
@@ -99,6 +109,7 @@ class PolicyBuilder:
         *,
         id: str | None = None,
         salt: str | None = None,
+        where: dict[str, object] | "RuleWhere" | None = None,
     ) -> "PolicyBuilder":
         """Append a tokenize rule."""
 
@@ -108,6 +119,8 @@ class PolicyBuilder:
         }
         if salt is not None:
             data["salt"] = salt
+        if where is not None:
+            data["where"] = where
         return self.rule(id=id, **data)
 
     def extend(self, rules: Iterable[Rule]) -> "PolicyBuilder":

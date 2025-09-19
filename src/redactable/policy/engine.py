@@ -90,6 +90,8 @@ def apply_policy(policy: Policy, findings: list[Finding], text: str) -> str:
 
     for rule in policy.rules:
         targets = by_kind.get(rule.field, [])
+        if rule.where is not None:
+            targets = [f for f in targets if rule.applies_to(f)]
         if not targets:
             continue
 
