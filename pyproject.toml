@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "redactable"
 description = "One-line value prop."
 readme = "README.md"
-requires-python = ">=3.13.5"
+requires-python = ">=3.13"
 license = { text = "MIT" }
 authors = [{ name = "Sober & Co.", email = "redactable@open.soberandco.dev" }]
 keywords = ["privacy"]
@@ -19,6 +19,9 @@ dependencies = [
 ]
 
 dynamic = ["version"]
+
+[project.scripts]
+redactable = "redactable.cli:main"
 
 [tool.hatch.version]
 source = "vcs"
