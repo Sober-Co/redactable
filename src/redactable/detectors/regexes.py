@@ -95,9 +95,11 @@ except Exception:  # pragma: no cover
 # Simple phone regex fallback
 RE_PHONE = re.compile(
     r"""
+    (?<!\d)                    # do not start in the middle of a digit run
     (?:\+\d{1,3}[\s-]?)?      # optional country code
     (?:\(?\d{2,4}\)?[\s-]?)?  # optional area code
     \d{3,4}[\s-]?\d{3,4}      # subscriber number
+    (?![\s-]?\d)              # ensure the number does not continue
     """,
     re.VERBOSE,
 )
