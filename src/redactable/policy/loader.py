@@ -94,8 +94,11 @@ def _infer_action(
         return value
 
     transform_name = rule.get("transform")
+    transform_key: str | None = None
     if isinstance(transform_name, str) and transform_name.strip():
         transform_key = transform_name.strip()
+    has_transform = transform_key is not None
+    if has_transform:
         cfg = transform_types.get(transform_key)
         if isinstance(cfg, Mapping):
             action = _guess_action_from_type(cfg.get("type"))
@@ -108,7 +111,7 @@ def _infer_action(
             return action
         return None
 
-    if isinstance(default_action, str) and default_action.strip():
+    if not has_transform and isinstance(default_action, str) and default_action.strip():
         return default_action
 
     return None
