@@ -94,7 +94,6 @@ def _infer_action(
         return value
 
     transform_name = rule.get("transform")
-    unknown_transform = False
     if isinstance(transform_name, str) and transform_name.strip():
         transform_key = transform_name.strip()
         cfg = transform_types.get(transform_key)
@@ -107,9 +106,9 @@ def _infer_action(
         action = _guess_action_from_name(transform_key)
         if action:
             return action
-        unknown_transform = True
+        return None
 
-    if not unknown_transform and isinstance(default_action, str) and default_action.strip():
+    if isinstance(default_action, str) and default_action.strip():
         return default_action
 
     return None
@@ -225,7 +224,7 @@ def _normalize_policy_payload(data: Any, source: Path) -> dict[str, Any]:
     if isinstance(raw_transforms, Mapping):
         for key, value in raw_transforms.items():
             if isinstance(value, Mapping):
-                transform_types[key] = value
+                transform_types[key] = dict(value)
             else:
                 transform_types[key] = {"type": value}
 
