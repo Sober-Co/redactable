@@ -19,7 +19,7 @@ def load_policy(path: str | Path) -> Policy:
         ValueError: if the file extension is unsupported
         pydantic.ValidationError: if the content does not match the schema
     """
-    p = Path(path)
+    p = Path(path).expanduser()
     if not p.exists():
         candidate = None
         if not p.is_absolute():
@@ -29,6 +29,8 @@ def load_policy(path: str | Path) -> Policy:
             p = candidate
         else:
             raise FileNotFoundError(f"Policy file not found: {p}")
+
+    p = p.resolve()
 
     text = p.read_text(encoding="utf-8")
     suffix = p.suffix.lower()
