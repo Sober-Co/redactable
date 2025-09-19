@@ -42,3 +42,14 @@ def test_default_registry_fallback_phone_skips_cards(monkeypatch):
     findings = registry.scan("4111 1111 1111 1111")
 
     assert all(f.kind != "phone" for f in findings)
+
+
+def test_default_registry_fallback_phone_handles_international(monkeypatch):
+    from redactable.detectors import regexes
+
+    monkeypatch.setattr(regexes, "phonenumbers", None)
+    registry = DetectorRegistry.default(region="GB")
+
+    findings = registry.scan("+4412345678901")
+
+    assert any(f.kind == "phone" for f in findings)

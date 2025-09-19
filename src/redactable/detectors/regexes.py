@@ -112,6 +112,10 @@ RE_PHONE_SUFFIX_RUN = re.compile(r"^(?:[\s-]?\d)+")
 def _looks_like_pan(candidate: str) -> bool:
     """Heuristic guard for card-like numbers in the phone fallback."""
 
+    compact = candidate.replace(" ", "").replace("-", "")
+    if not compact.isdigit():
+        return False
+
     digits = digits_only(candidate)
     if not (13 <= len(digits) <= 19):
         return False
