@@ -38,3 +38,13 @@ def test_policy_factory_recreates_rules():
     # Different instances should be produced each time (no shared list)
     policy_one.rules[0].replacement = "changed"
     assert policy_two.rules[0].replacement == "[secure]"
+
+
+def test_policy_builder_accepts_where_clause():
+    builder = PolicyBuilder(name="filters")
+    builder.redact("email", where={"min_confidence": 0.8})
+
+    policy = builder.build()
+
+    assert policy.rules[0].where is not None
+    assert policy.rules[0].where.min_confidence == 0.8
