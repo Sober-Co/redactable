@@ -86,11 +86,6 @@ class CreditCardDetector:
                 extras={"luhn_valid": ok, "brand": brand},
             )
 
-try:
-    import phonenumbers  # type: ignore
-except Exception:  # pragma: no cover
-    phonenumbers = None
-
 # --------------------------------------------------------------------
 # Simple phone regex fallback
 RE_PHONE = re.compile(
@@ -277,14 +272,6 @@ class EmailDetector:
                 normalized=norm,
                 extras=extras,
             )
-
-try:
-    from stdnum import iban as std_iban  # type: ignore
-    from stdnum.gb import nhs as std_nhs  # type: ignore
-    from stdnum.us import ssn as std_us_ssn  # type: ignore
-except Exception:  # pragma: no cover
-    std_iban = std_nhs = std_us_ssn = None
-
 # --------------------------------------------------------------------
 # Regex patterns
 RE_NHS = re.compile(r"\b(\d{3})[\s-]?(\d{3})[\s-]?(\d{4})\b")
