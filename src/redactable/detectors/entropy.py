@@ -15,23 +15,6 @@ import re
 from .base import Match, register, Finding, Detector
 from .utils import shannon_entropy, looks_like_secret
 from typing import Iterable
-import math
-
-
-# --------------------------------------------------------------------
-# Helpers
-
-def shannon_entropy(s: str) -> float:
-    """
-    Calculate Shannon entropy of a string.
-    Returns a value >= 0, higher means more random.
-    """
-    if not s:
-        return 0.0
-    freq = {ch: s.count(ch) for ch in set(s)}
-    n = len(s)
-    return -sum((c/n) * math.log2(c/n) for c in freq.values())
-
 # --------------------------------------------------------------------
 # Regex pattern: matches candidate secrets
 BASELIKE_PATTERN = re.compile(
