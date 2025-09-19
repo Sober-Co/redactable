@@ -1,0 +1,71 @@
+name: "GDPR Default (GB)"
+version: 1
+
+metadata:
+  description: "Baseline GDPR policy for UK/GB contexts."
+  jurisdiction: "GB"
+  owner: "Sober & Co. / Redactable"
+  tags: [gdpr, baseline, uk]
+
+defaults:
+  unknown_field_action: redact        # safe default if a field isn't matched
+  keep_logs: true
+  anonymise_log_values: true
+
+rules:
+  - id: email_mask
+    field: email                      # field name or alias your engine understands
+    action: mask                      # mask local part, keep domain intact
+    keep_tail: 12
+    mask_glyph: "*"
+    when:
+      region: ["GB"]
+    reason: "GDPR Art. 5(1)(c) – Data minimisation"
+
+  - id: phone_redact
+    field: phone
+    action: redact
+    when:
+      region: ["GB"]
+    reason: "GDPR Art. 5(1)(c) – Data minimisation"
+
+  - id: nationalid_tokenise
+    field: national_id                # e.g., NI number / NHS number (map in your detectors)
+    action: tokenise
+    when:
+      special_category: false
+    reason: "GDPR Art. 4(5) – Pseudonymisation; Art. 9 – Special categories of personal data"
+
+  - id: ip_pseudonymise
+    field: ip_address
+    action: pseudonymise
+    reason: "Recital 26 – Pseudonymisation"
+
+  - id: location_generalise
+    field: location
+    action: generalise
+    params:
+      granularity: "region"           # e.g., exact → city → region
+    reason: "GDPR Art. 5(1)(c) – Data minimisation"
+
+  - id: dob_tokenise
+    field: date_of_birth
+    action: tokenise
+    params:
+      keep_year: true                 # or false if you want stricter masking
+    reason: "GDPR Art. 9 – Special categories"
+
+  - id: name_mask
+    field: full_name
+    action: mask
+    params:
+      keep_initials: true             # e.g., “J*** D***”
+    reason: "GDPR Art. 4 – Identifiers"
+
+  - id: free_text_scrub
+    field: notes                      # or whatever your unstructured text field is
+    action: scrub
+    params:
+      detectors: [email, phone, national_id, ip_address]
+      entropy: { enabled: true, threshold: 4.0 }
+    reason: "GDPR Art. 5 – lawful/limited processing of unstructured data"
