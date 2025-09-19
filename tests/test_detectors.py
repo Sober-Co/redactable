@@ -162,3 +162,38 @@ def test_schema_hints_handles_nested_iterables():
 
     assert phone_match.value == "PHONE_NUMBER"
     assert phone_match.meta["schema_meta"] == {"name": "PHONE_NUMBER"}
+
+
+def test_schema_hints_recurses_into_named_mappings():
+    context = {
+        "schema": {
+            "fields": [
+                {
+                    "name": "customer",
+                    "fields": [
+                        {"name": "customerEmail"},
+                        {"name": "customer_ssn"},
+                    ],
+                }
+            ]
+        }
+    }
+
+    matches = [m for m in run_all("", context=context) if m.label in {"EMAIL", "SSN"}]
+    assert {m.value for m in matches} == {"customerEmail", "customer_ssn"}
+
+
+def test_schema_hints_recurses_into_nested_mappings():
+    context = {
+        "schema": {
+            "schema": {
+                "customer": {
+                    "Email": {"type": "string"},
+                    "phone": {"type": "string"},
+                }
+            }
+        }
+    }
+
+    matches = [m for m in run_all("", context=context) if m.label in {"EMAIL", "PHONE"}]
+    assert {m.value for m in matches} == {"Email", "phone"}

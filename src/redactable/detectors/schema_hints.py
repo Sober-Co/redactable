@@ -77,6 +77,10 @@ def _iter_schema_fields(schema) -> Iterable[tuple[str, object]]:
             if key in _CONTAINER_KEYS:
                 continue
             results.append((str(key), value))
+            if isinstance(value, Mapping):
+                results.extend(_iter_schema_fields(value))
+            elif isinstance(value, Iterable) and not isinstance(value, (bytes, bytearray, str)):
+                results.extend(_iter_schema_fields(value))
         return results
 
     if isinstance(schema, str):
@@ -94,6 +98,7 @@ def _iter_schema_fields(schema) -> Iterable[tuple[str, object]]:
                 )
                 if name:
                     results.append((str(name), item))
+                    results.extend(_iter_schema_fields(item))
                 else:
                     results.extend(_iter_schema_fields(item))
             elif isinstance(item, str):
