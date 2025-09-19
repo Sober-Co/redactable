@@ -19,6 +19,12 @@ class StdoutWriter(Writer):
 class AuditJSONLWriter(Writer):
     def __init__(self, path: str):
         self._f = open(path, "w", encoding="utf-8")
+
+    def write_record(self, record: Record) -> None:
+        event = dict(record.meta)
+        event["content"] = record.content
+        self.write_event(event)
+
     def write_event(self, event: dict) -> None:
         self._f.write(json.dumps(event, ensure_ascii=False) + "\n")
     def close(self): self._f.close()
