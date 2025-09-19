@@ -1,0 +1,8 @@
+version: 1
+name: GDPR Default Policy
+rules:
+  - id: mask-email
+    field: email
+    action: mask
+    mask_glyph: "*"
+    keep_tail: 12
