@@ -13,9 +13,11 @@ defaults:
   anonymise_log_values: true
 
 rules:
-  - id: email_redact
+  - id: email_mask
     field: email                      # field name or alias your engine understands
-    action: redact                    # required
+    action: mask                      # mask local part, keep domain intact
+    keep_tail: 12
+    mask_glyph: "*"
     when:
       region: ["GB"]
     reason: "GDPR Art. 5(1)(c) – Data minimisation"
