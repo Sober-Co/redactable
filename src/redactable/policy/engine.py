@@ -53,6 +53,23 @@ def _tokenize(text: str, findings: Iterable[Finding], salt: str = "") -> str:
 
 # --- public API -------------------------------------------------------------
 
+def _cumulative_offset(offsets: list[tuple[int, int]], position: int) -> int:
+    """Compute total offset to apply before ``position``.
+
+    Offsets are recorded against the original finding start indices, so any
+    replacement that happened earlier in the text (strictly before the
+    position) should contribute to the adjustment. The returned value is the
+    shift that needs to be applied to map the original coordinate to the
+    current text.
+    """
+
+    total = 0
+    for start, delta in offsets:
+        if start < position:
+            total += delta
+    return total
+
+
 def apply_policy(policy: Policy, findings: list[Finding], text: str) -> str:
     """
     Apply a Policy to text using previously-detected Findings.
@@ -69,17 +86,44 @@ def apply_policy(policy: Policy, findings: list[Finding], text: str) -> str:
     for f in findings:
         by_kind.setdefault(f.kind, []).append(f)
 
+    offsets: list[tuple[int, int]] = []
+
     for rule in policy.rules:
         targets = by_kind.get(rule.field, [])
         if not targets:
             continue
+
+        adjusted_targets: list[tuple[Finding, int, int]] = []
+        for f in targets:
+            start, end = f.span
+            adj_start = start + _cumulative_offset(offsets, start)
+            adj_end = end + _cumulative_offset(offsets, end)
+            adjusted_targets.append((f, adj_start, adj_end))
+
+        replacements: list[tuple[int, int, str, int]] = []
+        # tuple -> (adjusted_start, adjusted_end, replacement_text, original_start)
         if rule.action == "redact":
             placeholder = rule.replacement or "[REDACTED:{kind}]"
-            out = _redact(out, targets, placeholder)
+            for f, adj_start, adj_end in adjusted_targets:
+                replacement = placeholder.format(kind=f.kind.upper())
+                replacements.append((adj_start, adj_end, replacement, f.span[0]))
         elif rule.action == "mask":
             cfg = _MaskCfg(keep_head=rule.keep_head, keep_tail=rule.keep_tail, glyph=rule.mask_glyph)
-            out = _mask(out, targets, cfg)
+            for f, adj_start, adj_end in adjusted_targets:
+                replacement = _mask_segment(out[adj_start:adj_end], cfg)
+                replacements.append((adj_start, adj_end, replacement, f.span[0]))
         elif rule.action == "tokenize":
-            out = _tokenize(out, targets, salt=rule.salt)
+            for f, adj_start, adj_end in adjusted_targets:
+                token = _sha256(f.normalized or f.value, salt=rule.salt)
+                replacements.append((adj_start, adj_end, token, f.span[0]))
+
+        if not replacements:
+            continue
+
+        for adj_start, adj_end, replacement, orig_start in sorted(replacements, key=lambda r: r[0], reverse=True):
+            out = out[:adj_start] + replacement + out[adj_end:]
+            delta = len(replacement) - (adj_end - adj_start)
+            if delta:
+                offsets.append((orig_start, delta))
 
     return out
