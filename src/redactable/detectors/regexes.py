@@ -143,9 +143,40 @@ class PhoneDetector:
             # Preferred: use Google's libphonenumber
             for m in phonenumbers.PhoneNumberMatcher(text, self.default_region):
                 num = m.number
-                norm = phonenumbers.format_number(
-                    num, phonenumbers.PhoneNumberFormat.E164
-                )
+                start, end = m.start, m.end
+
+                # Trim leading punctuation (e.g. "(") and trailing noise so the
+                # span/value cover just the phone number starting at the first
+                # plus or digit and ending on the final digit.
+                trim_start = start
+                while trim_start < end and not (
+                    text[trim_start] == "+" or text[trim_start].isdigit()
+                ):
+                    trim_start += 1
+
+                trim_end = end
+                while trim_end > trim_start and not text[trim_end - 1].isdigit():
+                    trim_end -= 1
+
+                if trim_start >= trim_end:
+                    continue
+
+                value = text[trim_start:trim_end]
+                digits = digits_only(value)
+                if not digits:
+                    continue
+
+                normalized = ("+" if value.startswith("+") else "") + digits
+                try:
+                    formatted = phonenumbers.format_number(
+                        num, phonenumbers.PhoneNumberFormat.E164
+                    )
+                except Exception:
+                    formatted = None
+                else:
+                    if formatted and digits_only(formatted) == digits:
+                        normalized = formatted
+
                 conf = 0.95 if phonenumbers.is_valid_number(num) else 0.6
                 extras = {
                     "region": phonenumbers.region_code_for_number(num),
@@ -153,10 +184,10 @@ class PhoneDetector:
                 }
                 yield Finding(
                     kind=self.name,
-                    value=text[m.start : m.end],
-                    span=(m.start, m.end),
+                    value=value,
+                    span=(trim_start, trim_end),
                     confidence=conf,
-                    normalized=norm,
+                    normalized=normalized,
                     extras=extras,
                 )
             return
