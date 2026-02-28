@@ -12,25 +12,10 @@ Intended as a complement to regex-based detectors.
 """
 
 import re
-from .base import Match, register, Finding, Detector
-from .utils import shannon_entropy, looks_like_secret
 from typing import Iterable
-import math
 
-
-# --------------------------------------------------------------------
-# Helpers
-
-def shannon_entropy(s: str) -> float:
-    """
-    Calculate Shannon entropy of a string.
-    Returns a value >= 0, higher means more random.
-    """
-    if not s:
-        return 0.0
-    freq = {ch: s.count(ch) for ch in set(s)}
-    n = len(s)
-    return -sum((c/n) * math.log2(c/n) for c in freq.values())
+from .base import Finding, Match, register
+from .utils import looks_like_secret, shannon_entropy
 
 # --------------------------------------------------------------------
 # Regex pattern: matches candidate secrets
@@ -56,6 +41,7 @@ class HighEntropyTokenDetector:
         entropy_threshold: minimum Shannon entropy (default ~3.5).
         min_len: minimum string length to consider.
     """
+
     name = "high_entropy_token"
 
     def __init__(self, entropy_threshold: float = 3.5, min_len: int = 24) -> None:
@@ -86,6 +72,7 @@ class HighEntropyTokenDetector:
 # Tokens separated by non-word; allow -,_,= typical in JWT/base64url
 _TOKEN = re.compile(r'([A-Za-z0-9_\-=+/]{20,})')
 
+
 class EntropyDetector:
     name = "entropy"
     labels = ("SECRET",)
@@ -101,6 +88,7 @@ class EntropyDetector:
                 continue
             H = shannon_entropy(token)
             if H >= threshold:
-                yield Match("SECRET", m.start(1), m.end(1), token, min(0.99, 0.7 + (H-threshold)/4), {"entropy": H})
+                yield Match("SECRET", m.start(1), m.end(1), token, min(0.99, 0.7 + (H - threshold) / 4), {"entropy": H})
+
 
 register(EntropyDetector())

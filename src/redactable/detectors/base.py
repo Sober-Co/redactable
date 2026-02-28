@@ -3,22 +3,20 @@ Core types and helpers for detectors.
 
 Contents:
 - Finding: dataclass representing a detected entity.
-- Detector: Protocol interface that all detectors must implement.
+- Match: dataclass for the module-level detection system.
+- Detector: Protocol interface that Finding-based detectors must implement.
 - Shared helper functions: digits_only, luhn_ok, guess_card_brand.
 """
 
-from dataclasses import dataclass
-from typing import Iterable, Optional, Protocol, Tuple, Dict, Any
+from __future__ import annotations
+
 import re
+from dataclasses import dataclass
+from typing import Any, Iterable, Optional, Protocol
 
 # --------------------------------------------------------------------
-# Shared type aliases
-Span = Tuple[int, int]
-Extras = Dict[str, Any]
+# Match-based detection types (used by individual detector modules)
 
-
-from dataclasses import dataclass
-from typing import Iterable, Protocol, TypedDict, Optional, Dict, Any, List
 
 @dataclass(slots=True)
 class Match:
@@ -27,30 +25,35 @@ class Match:
     end: int
     value: str               # matched text (pre-transform)
     confidence: float = 1.0  # 0..1
-    meta: dict[str, Any] = None
+    meta: dict[str, Any] | None = None
 
-class Detector(Protocol):
-    name: str
-    labels: tuple[str, ...]
-    def detect(self, text: str, *, context: Optional[dict[str, Any]] = None) -> Iterable[Match]: ...
 
 # Simple registry
-_REGISTRY: Dict[str, Detector] = {}
-_LABEL_TO_DETECTORS: Dict[str, List[str]] = {}
+_REGISTRY: dict[str, Any] = {}
+_LABEL_TO_DETECTORS: dict[str, list[str]] = {}
 
-def register(detector: Detector) -> None:
+
+def register(detector: Any) -> None:
     _REGISTRY[detector.name] = detector
     for label in detector.labels:
         _LABEL_TO_DETECTORS.setdefault(label, []).append(detector.name)
 
-def get(name: str) -> Detector:
+
+def get(name: str) -> Any:
     return _REGISTRY[name]
 
-def detectors_for(label: str) -> list[Detector]:
-    return [ _REGISTRY[n] for n in _LABEL_TO_DETECTORS.get(label, []) ]
 
-def all_detectors() -> list[Detector]:
+def detectors_for(label: str) -> list[Any]:
+    return [_REGISTRY[n] for n in _LABEL_TO_DETECTORS.get(label, [])]
+
+
+def all_detectors() -> list[Any]:
     return list(_REGISTRY.values())
+
+
+# --------------------------------------------------------------------
+# Finding-based detection types (used by DetectorRegistry)
+
 
 @dataclass(slots=True)
 class Finding:
@@ -65,12 +68,13 @@ class Finding:
         normalized: Canonicalized form (e.g. digits-only phone number).
         extras: Additional metadata (brand, region, reasons, etc.).
     """
+
     kind: str
     value: str
-    span: Span
+    span: tuple[int, int]
     confidence: float
     normalized: Optional[str] = None
-    extras: Extras | None = None
+    extras: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         if not (0.0 <= self.confidence <= 1.0):
@@ -84,21 +88,25 @@ class Finding:
 
 class Detector(Protocol):
     """
-    Protocol that all detectors must follow.
+    Protocol that Finding-based detectors must follow.
     Each detector must expose a `name` and a `detect` method.
     """
+
     name: str
 
     def detect(self, text: str) -> Iterable[Finding]: ...
 
+
 # --------------------------------------------------------------------
 # Shared helpers
 
-_DIGITS = re.compile(r"\\D+")
+_DIGITS = re.compile(r"\D+")
+
 
 def digits_only(s: str) -> str:
     """Strip all non-digit characters from a string."""
     return _DIGITS.sub("", s)
+
 
 def luhn_ok(num: str) -> bool:
     """
@@ -119,6 +127,7 @@ def luhn_ok(num: str) -> bool:
         total += x
         alt = not alt
     return total % 10 == 0
+
 
 def guess_card_brand(pan: str) -> str | None:
     """
@@ -154,5 +163,3 @@ def guess_card_brand(pan: str) -> str | None:
         return "unionpay"
 
     return None
-
-

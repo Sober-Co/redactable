@@ -68,18 +68,6 @@ print(result)
 # → "Customer email: ****@example.com"
 ````
 
-
-### Python SDK
-
-````bash
-from redactable import apply
-
-data = "Customer email: test@example.com"
-result = apply(data, policy="gdpr.yaml")
-print(result)
-# → "Customer email: ****@example.com"
-````
-
 ### Pandas Integration
 
 ````bash

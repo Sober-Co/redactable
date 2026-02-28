@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "redactable"
-description = "One-line value prop."
+description = "Policy-driven framework for data redaction, masking, and privacy-preserving transformations."
 readme = "README.md"
 requires-python = ">=3.13"
 license = { text = "MIT" }
