@@ -1,0 +1,72 @@
+# policies/defaults.yaml
+# Default generic policy for Redactable.
+# Covers all built-in detectors with sensible redaction/masking defaults.
+# Use as a starting point or inherit from in custom policies.
+
+version: 1
+name: "default"
+description: >
+  Generic default policy that redacts or masks all PII detected by built-in
+  detectors. Suitable for general-purpose data sanitisation where no specific
+  regulatory framework is required.
+
+rules:
+  # --- Email addresses: mask, preserving domain for context ---
+  - id: email_mask
+    field: email
+    action: mask
+    keep_head: 1
+    keep_tail: 0
+    mask_glyph: "*"
+
+  # --- Phone numbers: redact completely ---
+  - id: phone_redact
+    field: phone
+    action: redact
+    replacement: "[REDACTED:PHONE]"
+
+  # --- Credit card numbers: mask, show last 4 digits ---
+  - id: credit_card_mask
+    field: credit_card
+    action: mask
+    keep_head: 0
+    keep_tail: 4
+    mask_glyph: "X"
+
+  # --- NHS numbers (UK): redact ---
+  - id: nhs_number_redact
+    field: nhs_number
+    action: redact
+    replacement: "[REDACTED:NHS]"
+
+  # --- NHS numbers (legacy detector kind): redact ---
+  - id: nhs_redact
+    field: nhs
+    action: redact
+    replacement: "[REDACTED:NHS]"
+
+  # --- US Social Security Numbers: redact ---
+  - id: ssn_us_redact
+    field: ssn_us
+    action: redact
+    replacement: "[REDACTED:SSN]"
+
+  # --- US SSN (legacy detector kind): redact ---
+  - id: ssn_redact
+    field: ssn
+    action: redact
+    replacement: "[REDACTED:SSN]"
+
+  # --- IBAN bank account numbers: mask, show last 4 ---
+  - id: iban_mask
+    field: iban
+    action: mask
+    keep_head: 2
+    keep_tail: 4
+    mask_glyph: "•"
+
+  # --- High-entropy tokens (API keys, secrets): redact ---
+  - id: high_entropy_redact
+    field: high_entropy_token
+    action: redact
+    replacement: "[REDACTED:SECRET]"

@@ -1,0 +1,57 @@
+# policies/global.yaml
+# Global catch-all policy for Redactable.
+# Redacts all detected PII types with generic placeholders.
+# Use when maximum data minimisation is required regardless of jurisdiction.
+
+version: 1
+name: "global"
+description: >
+  Strict global policy that redacts all detected PII with no partial
+  masking or tokenisation. Suitable for environments where no personal
+  data should survive processing.
+
+rules:
+  - id: email_redact
+    field: email
+    action: redact
+    replacement: "[REDACTED:EMAIL]"
+
+  - id: phone_redact
+    field: phone
+    action: redact
+    replacement: "[REDACTED:PHONE]"
+
+  - id: credit_card_redact
+    field: credit_card
+    action: redact
+    replacement: "[REDACTED:CREDIT_CARD]"
+
+  - id: nhs_number_redact
+    field: nhs_number
+    action: redact
+    replacement: "[REDACTED:NHS_NUMBER]"
+
+  - id: nhs_redact
+    field: nhs
+    action: redact
+    replacement: "[REDACTED:NHS]"
+
+  - id: ssn_us_redact
+    field: ssn_us
+    action: redact
+    replacement: "[REDACTED:SSN]"
+
+  - id: ssn_redact
+    field: ssn
+    action: redact
+    replacement: "[REDACTED:SSN]"
+
+  - id: iban_redact
+    field: iban
+    action: redact
+    replacement: "[REDACTED:IBAN]"
+
+  - id: high_entropy_redact
+    field: high_entropy_token
+    action: redact
+    replacement: "[REDACTED:SECRET]"
