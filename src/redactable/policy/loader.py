@@ -238,7 +238,7 @@ def _normalize_policy_payload(data: Any, source: Path) -> dict[str, Any]:
     )
 
     payload: dict[str, Any] = {
-        "version": data.get("version"),
+        "version": data.get("version", 1),
         "name": name,
         "description": description,
         "rules": rules,

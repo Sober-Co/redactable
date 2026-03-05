@@ -1,17 +1,20 @@
 from .detectors import (
-Finding,
-Detector,
-DetectorRegistry,
-EmailDetector,
-PhoneDetector,
-CreditCardDetector,
-NHSNumberDetector,
-USSSNDetector,
-IBANDetector,
-HighEntropyTokenDetector,
+    Finding,
+    Detector,
+    DetectorRegistry,
+    EmailDetector,
+    PhoneDetector,
+    CreditCardDetector,
+    NHSNumberDetector,
+    USSSNDetector,
+    IBANDetector,
+    HighEntropyTokenDetector,
 )
 from .policy.loader import load_policy
 from .policy.engine import apply_policy
+from .policy.model import Policy, Rule
+from .audit import AuditLogger
+from .engine import RedactionEngine
 
 
 # --------------------------------------------------------------------
@@ -22,16 +25,14 @@ def apply(data: str, policy: str | None = None, *, region: str = "GB") -> str:
     """
     Detect sensitive data in `data` and apply a redaction policy.
 
-
     Args:
-    data: Input text to process.
-    policy: Optional path to a YAML/JSON policy file.
-    region: Default region for phone parsing (e.g., "GB", "US").
-
+        data: Input text to process.
+        policy: Optional path to a YAML/JSON policy file.
+        region: Default region for phone parsing (e.g., "GB", "US").
 
     Returns:
-    The transformed text after applying the policy. If no policy is
-    provided, detection runs but the original text is returned unchanged.
+        The transformed text after applying the policy. If no policy is
+        provided, detection runs but the original text is returned unchanged.
     """
     registry = DetectorRegistry.default(region=region)
     findings = list(registry.scan(data))
@@ -46,15 +47,21 @@ def apply(data: str, policy: str | None = None, *, region: str = "GB") -> str:
 
 
 __all__ = [
-"Finding",
-"Detector",
-"DetectorRegistry",
-"EmailDetector",
-"PhoneDetector",
-"CreditCardDetector",
-"NHSNumberDetector",
-"USSSNDetector",
-"IBANDetector",
-"HighEntropyTokenDetector",
-"apply",
+    "Finding",
+    "Detector",
+    "DetectorRegistry",
+    "EmailDetector",
+    "PhoneDetector",
+    "CreditCardDetector",
+    "NHSNumberDetector",
+    "USSSNDetector",
+    "IBANDetector",
+    "HighEntropyTokenDetector",
+    "apply",
+    "apply_policy",
+    "load_policy",
+    "Policy",
+    "Rule",
+    "AuditLogger",
+    "RedactionEngine",
 ]

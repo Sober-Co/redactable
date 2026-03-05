@@ -1,5 +1,3 @@
-# redactable/detectors/entropy.py
-
 """
 Entropy-based detectors.
 
@@ -12,25 +10,11 @@ Intended as a complement to regex-based detectors.
 """
 
 import re
-from .base import Match, register, Finding, Detector
-from .utils import shannon_entropy, looks_like_secret
 from typing import Iterable
-import math
 
+from .base import Match, register, Finding
+from .utils import shannon_entropy, looks_like_secret
 
-# --------------------------------------------------------------------
-# Helpers
-
-def shannon_entropy(s: str) -> float:
-    """
-    Calculate Shannon entropy of a string.
-    Returns a value >= 0, higher means more random.
-    """
-    if not s:
-        return 0.0
-    freq = {ch: s.count(ch) for ch in set(s)}
-    n = len(s)
-    return -sum((c/n) * math.log2(c/n) for c in freq.values())
 
 # --------------------------------------------------------------------
 # Regex pattern: matches candidate secrets
@@ -46,7 +30,7 @@ BASELIKE_PATTERN = re.compile(
 )
 
 # --------------------------------------------------------------------
-# Detector
+# Detector used by DetectorRegistry (returns Finding objects)
 
 class HighEntropyTokenDetector:
     """
@@ -63,10 +47,6 @@ class HighEntropyTokenDetector:
         self.min_len = min_len
 
     def detect(self, text: str) -> Iterable[Finding]:
-        """
-        Scan text for high-entropy sequences.
-        Yields Finding objects for each match.
-        """
         for m in BASELIKE_PATTERN.finditer(text):
             raw = m.group(0)
             if len(raw) < self.min_len:
@@ -83,8 +63,11 @@ class HighEntropyTokenDetector:
                 )
 
 
-# Tokens separated by non-word; allow -,_,= typical in JWT/base64url
+# --------------------------------------------------------------------
+# Modular detector (returns Match objects, registered globally)
+
 _TOKEN = re.compile(r'([A-Za-z0-9_\-=+/]{20,})')
+
 
 class EntropyDetector:
     name = "entropy"
@@ -101,6 +84,11 @@ class EntropyDetector:
                 continue
             H = shannon_entropy(token)
             if H >= threshold:
-                yield Match("SECRET", m.start(1), m.end(1), token, min(0.99, 0.7 + (H-threshold)/4), {"entropy": H})
+                yield Match(
+                    "SECRET", m.start(1), m.end(1), token,
+                    min(0.99, 0.7 + (H - threshold) / 4),
+                    {"entropy": H},
+                )
+
 
 register(EntropyDetector())
