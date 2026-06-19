@@ -1,7 +1,7 @@
 # ruff: noqa: E402
 from dataclasses import dataclass
 import hashlib
-from typing import Iterable
+from typing import Iterable, overload, Literal
 
 from redactable.detectors import Finding
 from redactable.policy import Policy
@@ -54,8 +54,35 @@ def _tokenize(text: str, findings: Iterable[Finding], salt: str = "") -> str:
 
 # --- public API -------------------------------------------------------------
 
+
+@overload
 def apply_policy(
-    policy: Policy, findings: list[Finding], text: str, *, with_audit: bool = False
+    policy: Policy,
+    findings: list[Finding],
+    text: str,
+    *,
+    with_audit: Literal[False] = False,
+) -> str:
+    ...
+
+
+@overload
+def apply_policy(
+    policy: Policy,
+    findings: list[Finding],
+    text: str,
+    *,
+    with_audit: Literal[True],
+) -> tuple[str, list[AuditEvent]]:
+    ...
+
+
+def apply_policy(
+    policy: Policy,
+    findings: list[Finding],
+    text: str,
+    *,
+    with_audit: bool = False,
 ) -> str | tuple[str, list[AuditEvent]]:
     """
     Apply a Policy to text using previously-detected Findings.

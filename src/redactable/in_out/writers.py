@@ -23,7 +23,7 @@ class StdoutWriter(Writer):
 class AuditJSONLWriter(Writer):
     def __init__(self, path: str):
         self.path = path
-        self._f = open(path, "w", encoding="utf-8")
+        self._f = open(path, "w", encoding="utf-8")  # noqa: SIM115
 
     def write_event(self, event: dict) -> None:
         self._f.write(json.dumps(event, ensure_ascii=False) + "\n")

@@ -1,14 +1,19 @@
-"""Transform Registry for redaction operations."""
+"""Transform Registry for redaction operations.
+
+Note: In v0.1, transforms are applied directly via policy engine.
+This registry provides extensibility for v0.2+ plugin system.
+"""
 
 from __future__ import annotations
 from typing import Callable, Dict, Optional
 
-from redactable.detectors import Finding
-
 
 class TransformRegistry:
     """
-    Registry of transforms. Provides access to registered transformation functions.
+    Registry of transforms. Provides extensibility for custom transformations.
+
+    In v0.1, this is a placeholder for the plugin system coming in v0.2.
+    Actual transforms (redact, mask, tokenize) are applied via policy/engine.py.
     """
 
     def __init__(self, transforms: Optional[Dict[str, Callable]] = None) -> None:
@@ -16,18 +21,15 @@ class TransformRegistry:
 
     @classmethod
     def default(cls) -> TransformRegistry:
-        """Return a registry preloaded with built-in transforms."""
-        from . import redact, mask, tokenise
-
+        """Return a registry preloaded with built-in transforms (v0.2)."""
         return cls({
-            "redact": redact.redact,
-            "mask": mask.mask,
-            "tokenize": tokenise.tokenize,
-            "tokenise": tokenise.tokenize,  # Alias
+            "redact": None,
+            "mask": None,
+            "tokenize": None,
         })
 
     def register(self, name: str, transform: Callable) -> None:
-        """Register a transformation function."""
+        """Register a custom transformation function."""
         self.transforms[name] = transform
 
     def get(self, name: str) -> Optional[Callable]:

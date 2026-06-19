@@ -58,5 +58,5 @@ def generate_audit_event(
         value_transformed=transformed_segment,
         span=finding.span,
         confidence=finding.confidence,
-        rule_reason=rule.reason,
+        rule_reason=rule.id,
     )
