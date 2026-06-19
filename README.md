@@ -80,19 +80,23 @@ print(result)
 # → "Customer email: ****@example.com"
 ````
 
-### Pandas Integration
+### Pandas Integration (Coming in v0.2)
+
+Pandas DataFrame support is planned for the next release. For now, apply redaction row-by-row:
 
 ````bash
 import pandas as pd
-import redactable.pandas
+from redactable import apply
 
 df = pd.DataFrame({
     "email": ["alice@example.com", "bob@corp.com"],
     "cc": ["4111111111111111", "5500000000000004"]
 })
 
-redacted = df.redact(policy="gdpr.yaml")
-print(redacted)
+# Apply redaction to each row
+for col in df.columns:
+    df[col] = df[col].apply(lambda x: apply(str(x), policy="gdpr.yaml"))
+print(df)
 ````
 
 ### Audit Logs

@@ -13,6 +13,11 @@ HighEntropyTokenDetector,
 from .policy.loader import load_policy
 from .policy.engine import apply_policy
 
+try:
+    from .in_out import pandas_accessor  # noqa: F401
+except ImportError:
+    pass
+
 
 # --------------------------------------------------------------------
 # High-level API
