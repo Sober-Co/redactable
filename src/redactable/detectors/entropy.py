@@ -12,27 +12,11 @@ Intended as a complement to regex-based detectors.
 """
 
 import re
-from .base import Match, register, Finding, Detector
+from .base import Finding, register
 from .utils import shannon_entropy, looks_like_secret
 from typing import Iterable
-import math
 
 
-# --------------------------------------------------------------------
-# Helpers
-
-def shannon_entropy(s: str) -> float:
-    """
-    Calculate Shannon entropy of a string.
-    Returns a value >= 0, higher means more random.
-    """
-    if not s:
-        return 0.0
-    freq = {ch: s.count(ch) for ch in set(s)}
-    n = len(s)
-    return -sum((c/n) * math.log2(c/n) for c in freq.values())
-
-# --------------------------------------------------------------------
 # Regex pattern: matches candidate secrets
 BASELIKE_PATTERN = re.compile(
     r"""
@@ -45,8 +29,6 @@ BASELIKE_PATTERN = re.compile(
     re.VERBOSE,
 )
 
-# --------------------------------------------------------------------
-# Detector
 
 class HighEntropyTokenDetector:
     """
@@ -86,21 +68,27 @@ class HighEntropyTokenDetector:
 # Tokens separated by non-word; allow -,_,= typical in JWT/base64url
 _TOKEN = re.compile(r'([A-Za-z0-9_\-=+/]{20,})')
 
+
 class EntropyDetector:
     name = "entropy"
-    labels = ("SECRET",)
 
     def __init__(self, *, threshold: float = 3.5):
         self.threshold = threshold
 
-    def detect(self, text: str, *, context=None):
-        threshold = (context or {}).get("entropy_threshold", self.threshold)
+    def detect(self, text: str):
         for m in _TOKEN.finditer(text):
             token = m.group(1)
             if not looks_like_secret(token):
                 continue
             H = shannon_entropy(token)
-            if H >= threshold:
-                yield Match("SECRET", m.start(1), m.end(1), token, min(0.99, 0.7 + (H-threshold)/4), {"entropy": H})
+            if H >= self.threshold:
+                yield Finding(
+                    kind=self.name,
+                    value=token,
+                    span=m.span(1),
+                    confidence=min(0.99, 0.7 + (H - self.threshold) / 4),
+                    extras={"entropy": H},
+                )
+
 
 register(EntropyDetector())
