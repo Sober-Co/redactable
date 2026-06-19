@@ -10,7 +10,7 @@ from .model import Policy
 try:
     import yaml  # type: ignore
 except Exception:  # pragma: no cover
-    yaml = None
+    yaml = None  # type: ignore
 
 
 _RULE_ALLOWED_KEYS = {
@@ -210,14 +210,16 @@ def _normalize_policy_payload(data: Any, source: Path) -> dict[str, Any]:
         if isinstance(meta_desc, str) and meta_desc.strip():
             description = meta_desc.strip()
 
-    if isinstance(data.get("name"), str) and data.get("name").strip():
-        name = data["name"].strip()
+    name_value = data.get("name")
+    if isinstance(name_value, str) and name_value.strip():
+        name = name_value.strip()
 
     if name is None:
         name = source.stem
 
-    if isinstance(data.get("description"), str) and data.get("description").strip():
-        description = data["description"].strip()
+    desc_value = data.get("description")
+    if isinstance(desc_value, str) and desc_value.strip():
+        description = desc_value.strip()
 
     defaults = data.get("defaults")
     default_action: str | None = None
