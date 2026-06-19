@@ -47,7 +47,8 @@ def nhs_check(n: str) -> bool:
     return check == int(n[-1])
 
 def shannon_entropy(s: str) -> float:
-    if not s: return 0.0
+    if not s:
+        return 0.0
     from collections import Counter
     counts = Counter(s)
     length = len(s)
@@ -57,5 +58,6 @@ _BASE64ISH = re.compile(r'^[A-Za-z0-9+/=_-]+$')
 _HEXISH    = re.compile(r'^[0-9a-fA-F]+$')
 def looks_like_secret(token: str) -> bool:
     # quick heuristic: base64/hex-ish + length
-    if len(token) < 20: return False
+    if len(token) < 20:
+        return False
     return bool(_BASE64ISH.match(token) or _HEXISH.match(token))

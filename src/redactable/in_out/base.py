@@ -15,4 +15,6 @@ class Writer(Protocol):
 
 
 def _open(path: str, mode: str):
-    return gzip.open(path, mode) if str(path).endswith(".gz") else open(path, mode, encoding="utf-8", newline="")
+    if str(path).endswith(".gz"):
+        return gzip.open(path, mode)
+    return open(path, mode, encoding="utf-8", newline="")

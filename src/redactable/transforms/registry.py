@@ -22,11 +22,7 @@ class TransformRegistry:
     @classmethod
     def default(cls) -> TransformRegistry:
         """Return a registry preloaded with built-in transforms (v0.2)."""
-        return cls({
-            "redact": None,
-            "mask": None,
-            "tokenize": None,
-        })
+        return cls({})
 
     def register(self, name: str, transform: Callable) -> None:
         """Register a custom transformation function."""
