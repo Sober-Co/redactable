@@ -47,7 +47,7 @@ def test_dataframe_redact_mixed_types():
     # Numbers should remain unchanged (passed through as strings, but not matched)
     assert redacted["age"][0] == 25
     # Booleans should remain unchanged
-    assert redacted["active"][0] == True
+    assert redacted["active"][0]
 
 
 @pytest.mark.skipif(not HAS_PANDAS, reason="pandas not installed")

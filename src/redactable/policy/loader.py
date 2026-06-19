@@ -137,7 +137,11 @@ def _merge_transform_settings(
             value = transform.get(source_key)
             if isinstance(value, int) and target_key not in rule:
                 rule[target_key] = value
-        glyph = transform.get("mask_glyph") or transform.get("glyph") or transform.get("replacement")
+        glyph = (
+            transform.get("mask_glyph")
+            or transform.get("glyph")
+            or transform.get("replacement")
+        )
         if isinstance(glyph, str) and glyph.strip() and "mask_glyph" not in rule:
             rule["mask_glyph"] = glyph
     elif action == "redact":
