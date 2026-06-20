@@ -1,11 +1,12 @@
 # ruff: noqa: E402
-from dataclasses import dataclass
 import hashlib
-from typing import Iterable, overload, Literal
+from collections.abc import Iterable
+from dataclasses import dataclass
+from typing import Literal, overload
 
+from redactable.audit import AuditEvent, generate_audit_event
 from redactable.detectors import Finding
 from redactable.policy import Policy
-from redactable.audit import AuditEvent, generate_audit_event
 
 
 @dataclass(slots=True)
@@ -14,7 +15,9 @@ class _MaskCfg:
     keep_tail: int = 4
     glyph: str = "•"
 
+
 # --- local transforms (minimal v0.1; no external deps) ---------------------
+
 
 def _redact(text: str, findings: Iterable[Finding], placeholder: str = "[REDACTED:{kind}]") -> str:
     out = text
@@ -28,7 +31,7 @@ def _mask_segment(s: str, cfg: _MaskCfg) -> str:
     if len(s) <= cfg.keep_head + cfg.keep_tail:
         return cfg.glyph * len(s)
     mid = cfg.glyph * (len(s) - cfg.keep_head - cfg.keep_tail)
-    return s[:cfg.keep_head] + mid + s[-cfg.keep_tail:]
+    return s[: cfg.keep_head] + mid + s[-cfg.keep_tail :]
 
 
 def _mask(text: str, findings: Iterable[Finding], cfg: _MaskCfg) -> str:
@@ -62,8 +65,7 @@ def apply_policy(
     text: str,
     *,
     with_audit: Literal[False] = False,
-) -> str:
-    ...
+) -> str: ...
 
 
 @overload
@@ -73,8 +75,7 @@ def apply_policy(
     text: str,
     *,
     with_audit: Literal[True],
-) -> tuple[str, list[AuditEvent]]:
-    ...
+) -> tuple[str, list[AuditEvent]]: ...
 
 
 def apply_policy(

@@ -1,5 +1,7 @@
-from typing import Iterable
+from collections.abc import Iterable
+
 from redactable.detectors import Finding
+
 
 def redact(
     text: str,

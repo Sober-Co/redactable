@@ -7,13 +7,14 @@ Contents:
 - Shared helper functions: digits_only, luhn_ok, guess_card_brand.
 """
 
-from dataclasses import dataclass
-from typing import Iterable, Optional, Protocol, Tuple, Dict, Any
 import re
+from collections.abc import Iterable
+from dataclasses import dataclass
+from typing import Any, Protocol
 
 # Shared type aliases
-Span = Tuple[int, int]
-Extras = Dict[str, Any]
+Span = tuple[int, int]
+Extras = dict[str, Any]
 
 
 @dataclass(slots=True)
@@ -29,11 +30,12 @@ class Finding:
         normalized: Canonicalized form (e.g. digits-only phone number).
         extras: Additional metadata (brand, region, reasons, etc.).
     """
+
     kind: str
     value: str
     span: Span
     confidence: float
-    normalized: Optional[str] = None
+    normalized: str | None = None
     extras: Extras | None = None
 
     def __post_init__(self) -> None:
@@ -51,13 +53,14 @@ class Detector(Protocol):
     Protocol that all detectors must follow.
     Each detector must expose a `name` and implement a `detect` method.
     """
+
     name: str
 
     def detect(self, text: str) -> Iterable[Finding]: ...
 
 
 # Registry for backward compatibility (v0.1)
-_REGISTRY: Dict[str, Detector] = {}
+_REGISTRY: dict[str, Detector] = {}
 
 
 def register(detector: Detector) -> None:
@@ -74,14 +77,17 @@ def all_detectors() -> list[Detector]:
     """Get all registered detectors."""
     return list(_REGISTRY.values())
 
+
 # --------------------------------------------------------------------
 # Shared helpers
 
 _DIGITS = re.compile(r"\\D+")
 
+
 def digits_only(s: str) -> str:
     """Strip all non-digit characters from a string."""
     return _DIGITS.sub("", s)
+
 
 def luhn_ok(num: str) -> bool:
     """
@@ -102,6 +108,7 @@ def luhn_ok(num: str) -> bool:
         total += x
         alt = not alt
     return total % 10 == 0
+
 
 def guess_card_brand(pan: str) -> str | None:
     """
@@ -137,5 +144,3 @@ def guess_card_brand(pan: str) -> str | None:
         return "unionpay"
 
     return None
-
-

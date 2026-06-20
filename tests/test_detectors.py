@@ -1,16 +1,19 @@
 from redactable.detectors.run import run_all
-from redactable.detectors.utils import nhs_check, luhn_check, iban_check
+from redactable.detectors.utils import iban_check, luhn_check
+
 
 def test_email():
     text = "Contact: alice.smith+test@sub.example.co.uk and bad@mail"
     m = [x for x in run_all(text) if x.label == "EMAIL"]
     assert any("alice.smith+test@sub.example.co.uk" in x.value for x in m)
 
+
 def test_credit_card_luhn():
     # Visa test PAN: 4111 1111 1111 1111
     text = "Card: 4111 1111 1111 1111"
     m = [x for x in run_all(text) if x.label == "CREDIT_CARD"]
-    assert len(m) == 1 and luhn_check('4111111111111111')
+    assert len(m) == 1 and luhn_check("4111111111111111")
+
 
 def test_iban():
     # Example GB: GB82 WEST 1234 5698 7654 32
@@ -18,11 +21,13 @@ def test_iban():
     m = [x for x in run_all(text) if x.label == "IBAN"]
     assert len(m) == 1 and iban_check(m[0].value)
 
+
 def test_nhs():
     # Valid NHS example: 943 476 5919 (common example)
     text = "NHS No: 943 476 5919"
     m = [x for x in run_all(text) if x.label == "NHS_NUMBER"]
     assert len(m) == 1
+
 
 def test_ssn():
     text = "Employee SSN 078-05-1120 and invalid 000-00-0000"
@@ -30,11 +35,13 @@ def test_ssn():
     assert any("078-05-1120" in x.value for x in m)
     assert all("000-00-0000" not in x.value for x in m)
 
+
 def test_phone():
     text = "Call me at +447911123456 or 07123456789."
     m = [x for x in run_all(text) if x.label == "PHONE"]
     vals = [x.value for x in m]
     assert "+447911123456" in vals or "07123456789" in vals
+
 
 def test_entropy():
     likely = "sk_live_9aGQ2d1ZbQk81Y2U5YjRjY2QxY2E5ZWFm"  # base64-ish

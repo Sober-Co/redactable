@@ -1,22 +1,22 @@
-from .detectors import (
-Finding,
-Detector,
-DetectorRegistry,
-EmailDetector,
-PhoneDetector,
-CreditCardDetector,
-NHSNumberDetector,
-USSSNDetector,
-IBANDetector,
-HighEntropyTokenDetector,
-)
-from .policy.loader import load_policy
-from .policy.engine import apply_policy
+import contextlib
 
-try:
+from .detectors import (
+    CreditCardDetector,
+    Detector,
+    DetectorRegistry,
+    EmailDetector,
+    Finding,
+    HighEntropyTokenDetector,
+    IBANDetector,
+    NHSNumberDetector,
+    PhoneDetector,
+    USSSNDetector,
+)
+from .policy.engine import apply_policy
+from .policy.loader import load_policy
+
+with contextlib.suppress(ImportError):
     from .in_out import pandas_accessor  # noqa: F401
-except ImportError:
-    pass
 
 
 # --------------------------------------------------------------------
@@ -51,15 +51,15 @@ def apply(data: str, policy: str | None = None, *, region: str = "GB") -> str:
 
 
 __all__ = [
-"Finding",
-"Detector",
-"DetectorRegistry",
-"EmailDetector",
-"PhoneDetector",
-"CreditCardDetector",
-"NHSNumberDetector",
-"USSSNDetector",
-"IBANDetector",
-"HighEntropyTokenDetector",
-"apply",
+    "Finding",
+    "Detector",
+    "DetectorRegistry",
+    "EmailDetector",
+    "PhoneDetector",
+    "CreditCardDetector",
+    "NHSNumberDetector",
+    "USSSNDetector",
+    "IBANDetector",
+    "HighEntropyTokenDetector",
+    "apply",
 ]

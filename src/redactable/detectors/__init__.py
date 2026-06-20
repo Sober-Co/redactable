@@ -7,19 +7,29 @@ Exports:
 - Built-in detectors: Email, Phone, Credit Card, NHS, SSN, IBAN, High-Entropy Token
 """
 
-from .base import Finding, Detector, Match, all_detectors, detectors_for, get
-from .registry import DetectorRegistry
-from .regexes import (
-    EmailDetector,
-    PhoneDetector,
-    CreditCardDetector,
-    NHSNumberDetector,
-    USSSNDetector,
-    IBANDetector,
+from . import (  # noqa: F401
+    credit_card,
+    email,
+    entropy,
+    iban,
+    nhs,
+    phone,
+    schema_hints,
+    ssn,
 )
+from .base import Detector, Finding, all_detectors, get, register
 from .entropy import HighEntropyTokenDetector
-from . import email, credit_card, iban, nhs, ssn, phone, entropy, schema_hints  # noqa: F401
+from .regexes import (
+    CreditCardDetector,
+    EmailDetector,
+    IBANDetector,
+    NHSNumberDetector,
+    PhoneDetector,
+    USSSNDetector,
+)
+from .registry import DetectorRegistry
 from .run import run_all
+
 __all__ = [
     "Finding",
     "Detector",
@@ -31,4 +41,8 @@ __all__ = [
     "USSSNDetector",
     "IBANDetector",
     "HighEntropyTokenDetector",
+    "all_detectors",
+    "get",
+    "register",
+    "run_all",
 ]

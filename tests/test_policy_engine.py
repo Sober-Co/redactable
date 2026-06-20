@@ -1,17 +1,15 @@
 """Tests for policy engine and audit logging."""
 
-from redactable.detectors import Finding
-from redactable.policy.model import Policy, Rule
-from redactable.policy.engine import apply_policy
 from redactable.audit import AuditEvent
+from redactable.detectors import Finding
+from redactable.policy.engine import apply_policy
+from redactable.policy.model import Policy, Rule
 
 
 def test_apply_policy_single_rule():
     """Test applying a policy with a single rule."""
     text = "Contact: alice@example.com"
-    findings = [
-        Finding(kind="email", value="alice@example.com", span=(9, 27), confidence=0.95)
-    ]
+    findings = [Finding(kind="email", value="alice@example.com", span=(9, 27), confidence=0.95)]
     policy = Policy(
         version=1,
         name="test",
@@ -70,9 +68,7 @@ def test_apply_policy_with_mask_rule():
 def test_apply_policy_with_tokenize_rule():
     """Test applying a tokenize rule."""
     text = "Email: alice@example.com"
-    findings = [
-        Finding(kind="email", value="alice@example.com", span=(7, 25), confidence=0.95)
-    ]
+    findings = [Finding(kind="email", value="alice@example.com", span=(7, 25), confidence=0.95)]
     policy = Policy(
         version=1,
         name="test",
@@ -101,9 +97,7 @@ def test_apply_policy_no_matching_findings():
 def test_apply_policy_with_audit_events():
     """Test that audit events are generated when with_audit=True."""
     text = "Contact: alice@example.com"
-    findings = [
-        Finding(kind="email", value="alice@example.com", span=(9, 27), confidence=0.95)
-    ]
+    findings = [Finding(kind="email", value="alice@example.com", span=(9, 27), confidence=0.95)]
     policy = Policy(
         version=1,
         name="test",
@@ -163,9 +157,7 @@ def test_apply_policy_audit_events_no_changes():
 def test_apply_policy_backward_compatibility():
     """Test that apply_policy without with_audit returns only the string."""
     text = "Contact: alice@example.com"
-    findings = [
-        Finding(kind="email", value="alice@example.com", span=(9, 27), confidence=0.95)
-    ]
+    findings = [Finding(kind="email", value="alice@example.com", span=(9, 27), confidence=0.95)]
     policy = Policy(
         version=1,
         name="test",

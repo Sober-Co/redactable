@@ -1,31 +1,36 @@
 # ruff: noqa: E402
 from __future__ import annotations
-from typing import Literal, Optional
+
+from typing import Literal
+
 from pydantic import BaseModel, Field, field_validator
 
 Action = Literal["redact", "mask", "tokenize"]
 _ACTION_ALIASES = {
     "tokenise": "tokenize",
     "tokenize": "tokenize",
-    "pseudonymise": "tokenize",   # treat as tokenize for now
+    "pseudonymise": "tokenize",  # treat as tokenize for now
     "pseudonymize": "tokenize",
     "redact": "redact",
     "mask": "mask",
-    "scrub": "redact",            # scrub ≈ redact pass over text
-    "generalise": "mask",         # placeholder until a real generalise op exists
+    "scrub": "redact",  # scrub ≈ redact pass over text
+    "generalise": "mask",  # placeholder until a real generalise op exists
     "generalize": "mask",
 }
+
+
 class Rule(BaseModel):
     """
     One transformation applied to all Findings whose kind == field.
     Future: add 'where' filters (regex, confidence threshold, etc.).
     """
+
     id: str = Field(..., description="Rule identifier (unique within policy)")
     field: str = Field(..., description="Detector kind (e.g. email, credit_card, phone)")
     action: Action = Field(..., description="Transformation to apply")
 
     # Redact options
-    replacement: Optional[str] = Field(
+    replacement: str | None = Field(
         default=None,
         description="Placeholder for redact action, e.g. '[REDACTED:{kind}]'",
     )
@@ -54,10 +59,11 @@ class Rule(BaseModel):
 
     @field_validator("replacement")
     @classmethod
-    def _validate_replacement(cls, v: Optional[str]) -> Optional[str]:
+    def _validate_replacement(cls, v: str | None) -> str | None:
         if v is not None and v.strip() == "":
             raise ValueError("replacement cannot be empty; use None to default")
         return v
+
 
 class Policy(BaseModel):
     """
@@ -68,9 +74,10 @@ class Policy(BaseModel):
     description: optional human-friendly explanation.
     rules: ordered list; earlier rules do not block later ones (idempotent ops).
     """
+
     version: int = Field(..., ge=1, description="Policy schema version (>=1)")
     name: str = Field(..., min_length=1, description="Short policy name")
-    description: Optional[str] = Field(default=None, description="Optional description")
+    description: str | None = Field(default=None, description="Optional description")
     rules: list[Rule] = Field(default_factory=list)
 
     @field_validator("name")

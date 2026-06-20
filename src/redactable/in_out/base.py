@@ -1,13 +1,17 @@
 import gzip
-from typing import Iterable, Protocol, Dict, Any
+from collections.abc import Iterable
+from typing import Any, Protocol
+
 
 class Record:
-    def __init__(self, content: str, meta: Dict[str, Any] | None = None):
+    def __init__(self, content: str, meta: dict[str, Any] | None = None):
         self.content = content
         self.meta = meta or {}
 
+
 class Reader(Protocol):
     def iter_records(self) -> Iterable[Record]: ...
+
 
 class Writer(Protocol):
     def write_record(self, record: Record) -> None: ...

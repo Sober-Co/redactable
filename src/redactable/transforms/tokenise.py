@@ -1,16 +1,12 @@
-from typing import Iterable
+from collections.abc import Iterable
+
 from redactable.detectors import Finding
 
-def _mask(
-    value: str, keep_head: int = 0, keep_tail: int = 4, glyph: str = "•"
-) -> str:
+
+def _mask(value: str, keep_head: int = 0, keep_tail: int = 4, glyph: str = "•") -> str:
     if len(value) <= keep_head + keep_tail:
         return glyph * len(value)
-    return (
-        value[:keep_head]
-        + glyph * (len(value) - keep_head - keep_tail)
-        + value[-keep_tail:]
-    )
+    return value[:keep_head] + glyph * (len(value) - keep_head - keep_tail) + value[-keep_tail:]
 
 
 def mask_in_place(

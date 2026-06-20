@@ -1,4 +1,5 @@
-from .base import Record, Reader, _open
+from .base import Reader, Record, _open
+
 
 class TextFileReader(Reader):
     def __init__(self, path: str, by_line: bool = True):

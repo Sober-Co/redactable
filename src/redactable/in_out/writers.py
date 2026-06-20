@@ -1,7 +1,7 @@
 import json
 import sys
 
-from .base import Writer, Record, _open
+from .base import Record, Writer, _open
 
 
 class TextFileWriter(Writer):
@@ -15,10 +15,14 @@ class TextFileWriter(Writer):
     def close(self):
         self._f.close()
 
+
 class StdoutWriter(Writer):
     def write_record(self, record: Record) -> None:
         sys.stdout.write(record.content + "\n")
-    def close(self): pass
+
+    def close(self):
+        pass
+
 
 class AuditJSONLWriter(Writer):
     def __init__(self, path: str):

@@ -4,6 +4,7 @@ import pytest
 
 try:
     import pandas as pd
+
     HAS_PANDAS = True
 except ImportError:
     HAS_PANDAS = False
@@ -12,12 +13,13 @@ except ImportError:
 @pytest.mark.skipif(not HAS_PANDAS, reason="pandas not installed")
 def test_dataframe_redact_accessor_basic():
     """Test basic DataFrame redaction using the .redact() accessor."""
-    import redactable
 
-    df = pd.DataFrame({
-        "email": ["alice@example.com", "bob@example.com"],
-        "name": ["Alice", "Bob"],
-    })
+    df = pd.DataFrame(
+        {
+            "email": ["alice@example.com", "bob@example.com"],
+            "name": ["Alice", "Bob"],
+        }
+    )
 
     redacted = df.redact(policy="policies/gdpr.yaml")
 
@@ -32,13 +34,14 @@ def test_dataframe_redact_accessor_basic():
 @pytest.mark.skipif(not HAS_PANDAS, reason="pandas not installed")
 def test_dataframe_redact_mixed_types():
     """Test redaction with mixed column types."""
-    import redactable
 
-    df = pd.DataFrame({
-        "email": ["alice@example.com", "bob@example.com"],
-        "age": [25, 30],
-        "active": [True, False],
-    })
+    df = pd.DataFrame(
+        {
+            "email": ["alice@example.com", "bob@example.com"],
+            "age": [25, 30],
+            "active": [True, False],
+        }
+    )
 
     redacted = df.redact(policy="policies/gdpr.yaml")
 
@@ -53,11 +56,12 @@ def test_dataframe_redact_mixed_types():
 @pytest.mark.skipif(not HAS_PANDAS, reason="pandas not installed")
 def test_dataframe_redact_with_null_values():
     """Test that null values are handled gracefully."""
-    import redactable
 
-    df = pd.DataFrame({
-        "email": ["alice@example.com", None, "charlie@example.com"],
-    })
+    df = pd.DataFrame(
+        {
+            "email": ["alice@example.com", None, "charlie@example.com"],
+        }
+    )
 
     redacted = df.redact(policy="policies/gdpr.yaml")
 
@@ -70,11 +74,13 @@ def test_dataframe_redact_with_null_values():
 @pytest.mark.skipif(not HAS_PANDAS, reason="pandas not installed")
 def test_dataframe_redact_preserves_index():
     """Test that DataFrame redaction preserves the index."""
-    import redactable
 
-    df = pd.DataFrame({
-        "email": ["alice@example.com", "bob@example.com"],
-    }, index=["row_a", "row_b"])
+    df = pd.DataFrame(
+        {
+            "email": ["alice@example.com", "bob@example.com"],
+        },
+        index=["row_a", "row_b"],
+    )
 
     redacted = df.redact(policy="policies/gdpr.yaml")
 
@@ -85,11 +91,12 @@ def test_dataframe_redact_preserves_index():
 @pytest.mark.skipif(not HAS_PANDAS, reason="pandas not installed")
 def test_dataframe_redact_credit_cards():
     """Test redaction of credit card numbers."""
-    import redactable
 
-    df = pd.DataFrame({
-        "cc": ["4111111111111111", "5500000000000004"],
-    })
+    df = pd.DataFrame(
+        {
+            "cc": ["4111111111111111", "5500000000000004"],
+        }
+    )
 
     redacted = df.redact(policy="policies/pci.yaml")
 
@@ -100,11 +107,12 @@ def test_dataframe_redact_credit_cards():
 @pytest.mark.skipif(not HAS_PANDAS, reason="pandas not installed")
 def test_dataframe_redact_region_parameter():
     """Test that region parameter is passed through."""
-    import redactable
 
-    df = pd.DataFrame({
-        "phone": ["+447911123456", "+12025551234"],
-    })
+    df = pd.DataFrame(
+        {
+            "phone": ["+447911123456", "+12025551234"],
+        }
+    )
 
     redacted = df.redact(policy="policies/gdpr.yaml", region="GB")
 

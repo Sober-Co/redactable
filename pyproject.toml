@@ -31,4 +31,6 @@ packages = ["src/redactable"]
 
 [tool.ruff]
 line-length = 100
-select = ["E","F","I","B","UP","SIM"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]

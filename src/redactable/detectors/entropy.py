@@ -12,10 +12,10 @@ Intended as a complement to regex-based detectors.
 """
 
 import re
-from .base import Finding, register
-from .utils import shannon_entropy, looks_like_secret
-from typing import Iterable
+from collections.abc import Iterable
 
+from .base import Finding, register
+from .utils import looks_like_secret, shannon_entropy
 
 # Regex pattern: matches candidate secrets
 BASELIKE_PATTERN = re.compile(
@@ -38,6 +38,7 @@ class HighEntropyTokenDetector:
         entropy_threshold: minimum Shannon entropy (default ~3.5).
         min_len: minimum string length to consider.
     """
+
     name = "high_entropy_token"
 
     def __init__(self, entropy_threshold: float = 3.5, min_len: int = 24) -> None:
@@ -66,7 +67,7 @@ class HighEntropyTokenDetector:
 
 
 # Tokens separated by non-word; allow -,_,= typical in JWT/base64url
-_TOKEN = re.compile(r'([A-Za-z0-9_\-=+/]{20,})')
+_TOKEN = re.compile(r"([A-Za-z0-9_\-=+/]{20,})")
 
 
 class EntropyDetector:
@@ -81,7 +82,7 @@ class EntropyDetector:
             if not looks_like_secret(token):
                 continue
             H = shannon_entropy(token)
-            if H >= self.threshold:
+            if self.threshold <= H:
                 yield Finding(
                     kind=self.name,
                     value=token,

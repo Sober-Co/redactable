@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 from .model import Policy
 
@@ -94,11 +95,8 @@ def _infer_action(
         return value
 
     transform_name = rule.get("transform")
-    transform_key: str | None = None
     if isinstance(transform_name, str) and transform_name.strip():
         transform_key = transform_name.strip()
-    has_transform = transform_key is not None
-    if has_transform:
         cfg = transform_types.get(transform_key)
         if isinstance(cfg, Mapping):
             action = _guess_action_from_type(cfg.get("type"))
@@ -111,7 +109,7 @@ def _infer_action(
             return action
         return None
 
-    if not has_transform and isinstance(default_action, str) and default_action.strip():
+    if isinstance(default_action, str) and default_action.strip():
         return default_action
 
     return None
@@ -138,9 +136,7 @@ def _merge_transform_settings(
             if isinstance(value, int) and target_key not in rule:
                 rule[target_key] = value
         glyph = (
-            transform.get("mask_glyph")
-            or transform.get("glyph")
-            or transform.get("replacement")
+            transform.get("mask_glyph") or transform.get("glyph") or transform.get("replacement")
         )
         if isinstance(glyph, str) and glyph.strip() and "mask_glyph" not in rule:
             rule["mask_glyph"] = glyph

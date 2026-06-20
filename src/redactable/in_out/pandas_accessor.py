@@ -37,9 +37,7 @@ if pd is not None:
                 if df[col].dtype == "object":
                     df[col] = df[col].apply(
                         lambda x: (
-                            redact_text(str(x), policy=policy, region=region)
-                            if pd.notna(x)
-                            else x
+                            redact_text(str(x), policy=policy, region=region) if pd.notna(x) else x
                         )
                     )
 
