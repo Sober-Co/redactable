@@ -10,10 +10,9 @@ def _brand(digits: str) -> str | None:
     if digits.startswith("4") and len(digits) in (13, 16, 19):
         return "VISA"
     if (
-        (digits[:2] in {str(i) for i in range(51, 56)}
-         or (len(digits) >= 4 and 2221 <= int(digits[:4]) <= 2720))
-        and len(digits) == 16
-    ):
+        digits[:2] in {str(i) for i in range(51, 56)}
+        or (len(digits) >= 4 and 2221 <= int(digits[:4]) <= 2720)
+    ) and len(digits) == 16:
         return "MASTERCARD"
     if digits.startswith(("34", "37")) and len(digits) == 15:
         return "AMEX"
