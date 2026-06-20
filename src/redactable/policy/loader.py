@@ -2,15 +2,16 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any
 
 from .model import Policy
 
 try:
     import yaml  # type: ignore
 except Exception:  # pragma: no cover
-    yaml = None
+    yaml = None  # type: ignore
 
 
 _RULE_ALLOWED_KEYS = {
@@ -94,11 +95,8 @@ def _infer_action(
         return value
 
     transform_name = rule.get("transform")
-    transform_key: str | None = None
     if isinstance(transform_name, str) and transform_name.strip():
         transform_key = transform_name.strip()
-    has_transform = transform_key is not None
-    if has_transform:
         cfg = transform_types.get(transform_key)
         if isinstance(cfg, Mapping):
             action = _guess_action_from_type(cfg.get("type"))
@@ -111,7 +109,7 @@ def _infer_action(
             return action
         return None
 
-    if not has_transform and isinstance(default_action, str) and default_action.strip():
+    if isinstance(default_action, str) and default_action.strip():
         return default_action
 
     return None
@@ -137,7 +135,9 @@ def _merge_transform_settings(
             value = transform.get(source_key)
             if isinstance(value, int) and target_key not in rule:
                 rule[target_key] = value
-        glyph = transform.get("mask_glyph") or transform.get("glyph") or transform.get("replacement")
+        glyph = (
+            transform.get("mask_glyph") or transform.get("glyph") or transform.get("replacement")
+        )
         if isinstance(glyph, str) and glyph.strip() and "mask_glyph" not in rule:
             rule["mask_glyph"] = glyph
     elif action == "redact":
@@ -206,14 +206,16 @@ def _normalize_policy_payload(data: Any, source: Path) -> dict[str, Any]:
         if isinstance(meta_desc, str) and meta_desc.strip():
             description = meta_desc.strip()
 
-    if isinstance(data.get("name"), str) and data.get("name").strip():
-        name = data["name"].strip()
+    name_value = data.get("name")
+    if isinstance(name_value, str) and name_value.strip():
+        name = name_value.strip()
 
     if name is None:
         name = source.stem
 
-    if isinstance(data.get("description"), str) and data.get("description").strip():
-        description = data["description"].strip()
+    desc_value = data.get("description")
+    if isinstance(desc_value, str) and desc_value.strip():
+        description = desc_value.strip()
 
     defaults = data.get("defaults")
     default_action: str | None = None

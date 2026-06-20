@@ -1,1 +1,3 @@
-def redactable_io(policy): . . .
+def redactable_io(policy):
+    """Decorator for applying redaction to function I/O (v0.2)."""
+    ...

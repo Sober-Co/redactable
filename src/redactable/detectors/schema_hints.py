@@ -1,4 +1,4 @@
-from .base import Match, register
+from .base import register
 
 # This detector relies on context = {"schema": {"field_name": "value", ...}}
 # It emits matches for fields whose names are known sensitive hints.
@@ -17,6 +17,7 @@ _HINTS = {
     "date_of_birth": "DATE_DOB",
 }
 
+
 class SchemaHintDetector:
     name = "schema_hints"
     labels = tuple(set(_HINTS.values()))
@@ -26,5 +27,6 @@ class SchemaHintDetector:
         # We still implement the signature; integrate at the DataFrame layer.
         return
         yield  # generator stub
+
 
 register(SchemaHintDetector())
