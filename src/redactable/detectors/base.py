@@ -8,8 +8,6 @@ Contents:
 - Shared helper functions: digits_only, luhn_ok, guess_card_brand.
 """
 
-from __future__ import annotations
-
 import re
 from dataclasses import dataclass
 from typing import Any, Iterable, Optional, Protocol
@@ -49,6 +47,15 @@ def detectors_for(label: str) -> list[Any]:
 
 def all_detectors() -> list[Any]:
     return list(_REGISTRY.values())
+import re
+from collections.abc import Iterable
+from dataclasses import dataclass
+from typing import Any, Protocol
+
+# Shared type aliases
+Span = tuple[int, int]
+Extras = dict[str, Any]
+
 
 
 # --------------------------------------------------------------------
@@ -88,8 +95,8 @@ class Finding:
 
 class Detector(Protocol):
     """
-    Protocol that Finding-based detectors must follow.
-    Each detector must expose a `name` and a `detect` method.
+    Protocol that all detectors must follow.
+    Each detector must expose a `name` and implement a `detect` method.
     """
 
     name: str
@@ -97,10 +104,30 @@ class Detector(Protocol):
     def detect(self, text: str) -> Iterable[Finding]: ...
 
 
+# Registry for backward compatibility (v0.1)
+_REGISTRY: dict[str, Detector] = {}
+
+
+def register(detector: Detector) -> None:
+    """Register a detector instance in the global registry."""
+    _REGISTRY[detector.name] = detector
+
+
+def get(name: str) -> Detector:
+    """Get a detector by name."""
+    return _REGISTRY[name]
+
+
+def all_detectors() -> list[Detector]:
+    """Get all registered detectors."""
+    return list(_REGISTRY.values())
+
+
 # --------------------------------------------------------------------
 # Shared helpers
 
 _DIGITS = re.compile(r"\D+")
+
 
 
 def digits_only(s: str) -> str:

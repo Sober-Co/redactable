@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 name = "redactable"
 description = "Policy-driven framework for data redaction, masking, and privacy-preserving transformations."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "Sober & Co.", email = "redactable@open.soberandco.dev" }]
 keywords = ["privacy"]
@@ -31,4 +31,6 @@ packages = ["src/redactable"]
 
 [tool.ruff]
 line-length = 100
-select = ["E","F","I","B","UP","SIM"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
