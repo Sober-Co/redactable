@@ -69,17 +69,6 @@ print(result)
 ````
 
 
-### Python SDK
-
-````bash
-from redactable import apply
-
-data = "Customer email: test@example.com"
-result = apply(data, policy="gdpr.yaml")
-print(result)
-# → "Customer email: ****@example.com"
-````
-
 ### Pandas Integration (Coming in v0.2)
 
 Pandas DataFrame support is planned for the next release. For now, apply redaction row-by-row:

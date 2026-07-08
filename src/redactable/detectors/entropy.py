@@ -12,11 +12,12 @@ Intended as a complement to regex-based detectors.
 """
 
 import re
-from collections.abc import Iterable
+from typing import Iterable
 
-from .base import Finding, register
+from .base import Finding, Match, register
 from .utils import looks_like_secret, shannon_entropy
 
+# --------------------------------------------------------------------
 # Regex pattern: matches candidate secrets
 BASELIKE_PATTERN = re.compile(
     r"""
@@ -68,6 +69,7 @@ class HighEntropyTokenDetector:
 
 # Tokens separated by non-word; allow -,_,= typical in JWT/base64url
 _TOKEN = re.compile(r"([A-Za-z0-9_\-=+/]{20,})")
+
 
 
 class EntropyDetector:

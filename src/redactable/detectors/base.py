@@ -3,10 +3,50 @@ Core types and helpers for detectors.
 
 Contents:
 - Finding: dataclass representing a detected entity.
-- Detector: Protocol interface that all detectors must implement.
+- Match: dataclass for the module-level detection system.
+- Detector: Protocol interface that Finding-based detectors must implement.
 - Shared helper functions: digits_only, luhn_ok, guess_card_brand.
 """
 
+import re
+from dataclasses import dataclass
+from typing import Any, Iterable, Optional, Protocol
+
+# --------------------------------------------------------------------
+# Match-based detection types (used by individual detector modules)
+
+
+@dataclass(slots=True)
+class Match:
+    label: str               # e.g. "EMAIL", "CREDIT_CARD"
+    start: int               # byte/char index in the input text
+    end: int
+    value: str               # matched text (pre-transform)
+    confidence: float = 1.0  # 0..1
+    meta: dict[str, Any] | None = None
+
+
+# Simple registry
+_REGISTRY: dict[str, Any] = {}
+_LABEL_TO_DETECTORS: dict[str, list[str]] = {}
+
+
+def register(detector: Any) -> None:
+    _REGISTRY[detector.name] = detector
+    for label in detector.labels:
+        _LABEL_TO_DETECTORS.setdefault(label, []).append(detector.name)
+
+
+def get(name: str) -> Any:
+    return _REGISTRY[name]
+
+
+def detectors_for(label: str) -> list[Any]:
+    return [_REGISTRY[n] for n in _LABEL_TO_DETECTORS.get(label, [])]
+
+
+def all_detectors() -> list[Any]:
+    return list(_REGISTRY.values())
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -15,6 +55,11 @@ from typing import Any, Protocol
 # Shared type aliases
 Span = tuple[int, int]
 Extras = dict[str, Any]
+
+
+
+# --------------------------------------------------------------------
+# Finding-based detection types (used by DetectorRegistry)
 
 
 @dataclass(slots=True)
@@ -33,10 +78,10 @@ class Finding:
 
     kind: str
     value: str
-    span: Span
+    span: tuple[int, int]
     confidence: float
-    normalized: str | None = None
-    extras: Extras | None = None
+    normalized: Optional[str] = None
+    extras: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         if not (0.0 <= self.confidence <= 1.0):
@@ -81,7 +126,8 @@ def all_detectors() -> list[Detector]:
 # --------------------------------------------------------------------
 # Shared helpers
 
-_DIGITS = re.compile(r"\\D+")
+_DIGITS = re.compile(r"\D+")
+
 
 
 def digits_only(s: str) -> str:

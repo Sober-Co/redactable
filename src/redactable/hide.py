@@ -1,7 +1,3 @@
-"""
-Use this as a main entrypoint?
-"""
-
+from .decors import redactable_io
 from .decors import *  # noqa: F401, F403
-
-__all__: list[str] = []
+__all__ = ["redactable_io"]
