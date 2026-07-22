@@ -6,7 +6,7 @@ from typing import Literal, overload
 
 from redactable.audit import AuditEvent, generate_audit_event
 from redactable.detectors import Finding
-from redactable.policy import Policy
+from redactable.policy.model import Policy
 
 
 @dataclass(slots=True)
